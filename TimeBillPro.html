@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>TimeBill Pro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style id="print-styles">
+@media print {
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  body{background:#fff!important;color:#111!important;font-family:'DM Sans',Arial,sans-serif;margin:0;padding:0;}
+  .app,body>*:not(#pdf-preview){display:none!important;}
+  .toast,.modal-overlay{display:none!important;}
+  #pdf-preview{display:block!important;position:static!important;}
+}
+#pdf-preview{
+  display:none;position:fixed;inset:0;z-index:9999;
+  background:#fff;overflow-y:auto;
+  font-family:'DM Sans',Arial,sans-serif;color:#111;
+}
+.pdf-wrap{max-width:620px;margin:0 auto;padding:40px 32px 60px;}
+.pdf-header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #1e7aff;padding-bottom:20px;margin-bottom:28px;}
+.pdf-logo{font-size:22px;font-weight:800;color:#1e7aff;letter-spacing:-0.5px;}
+.pdf-logo span{color:#111;}
+.pdf-doc-title{font-size:22px;font-weight:800;color:#111;margin-bottom:4px;letter-spacing:-0.4px;}
+.pdf-doc-date{font-size:13px;color:#1e7aff;font-weight:600;}
+.pdf-section-title{font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#1e7aff;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #e8edf5;}
+.pdf-table{width:100%;border-collapse:collapse;margin-bottom:28px;font-size:13px;}
+.pdf-table th{text-align:left;padding:9px 12px;background:#f0f5ff;font-weight:700;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#3366cc;}
+.pdf-table th:last-child,.pdf-table td:last-child{text-align:right;}
+.pdf-table td{padding:11px 12px;border-bottom:1px solid #eef2f8;color:#333;vertical-align:middle;}
+.pdf-table tr:last-child td{border-bottom:none;}
+.pdf-table tr:nth-child(even) td{background:#fafbff;}
+.pdf-total-row{display:flex;justify-content:flex-end;margin-bottom:28px;}
+.pdf-total-box{background:#f0f5ff;border:1px solid #c6d8ff;border-radius:12px;padding:16px 24px;min-width:240px;}
+.pdf-total-box .row{display:flex;justify-content:space-between;gap:24px;font-size:13px;color:#555;margin-bottom:6px;}
+.pdf-total-box .row.big{font-size:20px;font-weight:800;color:#1e7aff;margin-top:10px;padding-top:10px;border-top:1px solid #c6d8ff;margin-bottom:0;}
+.pdf-remarks{background:#f8faff;border-left:3px solid #1e7aff;border-radius:6px;padding:14px 16px;margin-bottom:28px;font-size:13px;color:#333;line-height:1.8;}
+.pdf-remarks div{margin-bottom:2px;}
+.pdf-footer{text-align:center;font-size:11px;color:#aaa;border-top:1px solid #eef2f8;padding-top:16px;margin-top:12px;}
+.pdf-close-btn{position:fixed;top:16px;right:16px;background:#1e7aff;color:white;border:none;border-radius:20px;padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(30,122,255,0.4);z-index:10000;font-family:inherit;}
+.pdf-print-btn{position:fixed;top:16px;right:120px;background:#00c49a;color:white;border:none;border-radius:20px;padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(0,196,154,0.4);z-index:10000;font-family:inherit;}
+@media print{.pdf-close-btn,.pdf-print-btn{display:none!important;}}
+</style>
+
+<style>
+:root{
+  --bg-deep:#050d1a;--bg-card:#0c1829;--bg-elevated:#112038;--bg-input:#0e1e30;
+  --accent-blue:#1e7aff;--accent-blue-light:#4d9fff;--accent-teal:#00d4aa;
+  --text-primary:#f0f4ff;--text-secondary:#8aa3c4;--text-muted:#4a6480;
+  --border:rgba(30,122,255,0.15);--border-light:rgba(255,255,255,0.06);
+  --danger:#ff4d6d;--shadow-glow:0 0 40px rgba(30,122,255,0.12);--radius-btn:14px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{font-family:'DM Sans',-apple-system,'Hiragino Sans','Noto Sans KR',sans-serif;background:var(--bg-deep);color:var(--text-primary);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 50% at 10% -10%,rgba(30,122,255,0.12) 0%,transparent 60%),radial-gradient(ellipse 60% 40% at 90% 110%,rgba(0,212,170,0.07) 0%,transparent 60%);pointer-events:none;z-index:0;}
+.app{max-width:430px;margin:0 auto;min-height:100vh;position:relative;z-index:1;}
+.status-bar{display:flex;justify-content:space-between;align-items:center;padding:14px 24px 0;font-size:12px;font-weight:600;color:var(--text-secondary);}
+.header{padding:8px 20px 16px;display:flex;align-items:center;justify-content:space-between;}
+.app-title{font-size:26px;font-weight:700;background:linear-gradient(135deg,#f0f4ff 30%,#8ab4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-0.5px;}
+.header-right{display:flex;align-items:center;gap:8px;}
+.lang-switcher{position:relative;}
+.lang-btn{background:rgba(30,122,255,0.12);border:1px solid rgba(30,122,255,0.25);color:var(--accent-blue-light);font-size:12px;font-weight:700;padding:5px 11px;border-radius:20px;cursor:pointer;font-family:inherit;transition:all 0.2s;white-space:nowrap;}
+.lang-btn:active{transform:scale(0.95);}
+.lang-dropdown{position:absolute;top:calc(100% + 6px);right:0;background:var(--bg-elevated);border:1px solid var(--border-light);border-radius:14px;overflow:hidden;display:none;z-index:200;box-shadow:0 16px 40px rgba(0,0,0,0.5);min-width:140px;}
+.lang-dropdown.open{display:block;animation:fadeDown 0.18s ease;}
+@keyframes fadeDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.lang-option{display:flex;align-items:center;gap:8px;padding:11px 16px;font-size:13px;font-weight:500;color:var(--text-secondary);cursor:pointer;transition:background 0.15s;}
+.lang-option:hover{background:rgba(30,122,255,0.1);color:var(--text-primary);}
+.lang-option.active{color:var(--accent-blue-light);background:rgba(30,122,255,0.08);}
+.header-badge{background:rgba(30,122,255,0.15);border:1px solid rgba(30,122,255,0.3);color:var(--accent-blue-light);font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;display:none;align-items:center;gap:4px;}
+.running-dot{display:inline-block;width:8px;height:8px;background:var(--accent-teal);border-radius:50%;animation:pulse 1.5s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.7)}}
+.nav-tabs{display:flex;gap:8px;padding:0 16px 20px;}
+.nav-tab{flex:1;padding:10px 4px;text-align:center;font-size:12px;font-weight:600;border-radius:12px;border:none;cursor:pointer;transition:all 0.25s;font-family:inherit;}
+.nav-tab.active{background:var(--accent-blue);color:white;box-shadow:0 4px 16px rgba(30,122,255,0.35);}
+.nav-tab:not(.active){background:var(--bg-card);color:var(--text-secondary);border:1px solid var(--border-light);}
+.section{display:none;padding:0 16px 100px;}
+.section.active{display:block;}
+.timer-display{background:linear-gradient(145deg,#0a1624,#0f1e32);border:1px solid var(--border);border-radius:24px;padding:32px 20px;text-align:center;margin-bottom:12px;box-shadow:var(--shadow-glow),inset 0 1px 0 rgba(255,255,255,0.04);position:relative;overflow:hidden;}
+.timer-display::after{content:'';position:absolute;bottom:-30px;left:50%;transform:translateX(-50%);width:200px;height:60px;background:radial-gradient(ellipse,rgba(30,122,255,0.15),transparent);pointer-events:none;}
+.timer-project-name{font-size:13px;font-weight:600;color:var(--accent-blue-light);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;}
+.timer-time{font-family:'JetBrains Mono',monospace;font-size:56px;font-weight:500;letter-spacing:-1px;color:var(--text-primary);line-height:1;margin-bottom:6px;}
+.timer-earning{font-size:22px;font-weight:600;color:var(--accent-teal);}
+.timer-earning span{font-size:14px;opacity:0.7;margin-right:2px;}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:16px;border:none;border-radius:var(--radius-btn);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.2s;}
+.btn:active{transform:scale(0.97);}
+.btn-primary{background:linear-gradient(135deg,#1e7aff,#1565d8);color:white;box-shadow:0 4px 20px rgba(30,122,255,0.3);}
+.btn-success{background:linear-gradient(135deg,#00c49a,#009e7c);color:white;box-shadow:0 4px 16px rgba(0,196,154,0.3);}
+.btn-danger{background:linear-gradient(135deg,#ff4d6d,#d63651);color:white;box-shadow:0 4px 20px rgba(255,77,109,0.25);}
+.btn-secondary{background:var(--bg-elevated);color:var(--text-secondary);border:1px solid var(--border-light);}
+.btn-ghost{background:transparent;color:var(--accent-blue-light);border:1px solid rgba(30,122,255,0.25);}
+.btn-gold{background:linear-gradient(135deg,#f0b429,#d4920e);color:#1a0e00;font-weight:700;box-shadow:0 4px 16px rgba(240,180,41,0.25);}
+.btn-sm{padding:10px 16px;font-size:13px;border-radius:10px;width:auto;}
+.project-selector{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;margin-bottom:12px;}
+.project-selector::-webkit-scrollbar{display:none;}
+.project-chip{flex-shrink:0;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--border-light);background:var(--bg-card);color:var(--text-secondary);transition:all 0.2s;white-space:nowrap;}
+.project-chip.selected{background:rgba(30,122,255,0.15);border-color:rgba(30,122,255,0.4);color:var(--accent-blue-light);}
+.section-label{font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;padding-left:4px;}
+.form-group{margin-bottom:16px;}
+.form-label{display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;letter-spacing:0.04em;text-transform:uppercase;}
+.form-input{width:100%;background:var(--bg-input);border:1px solid var(--border-light);border-radius:12px;padding:14px 16px;font-family:inherit;font-size:15px;color:var(--text-primary);outline:none;transition:border-color 0.2s,box-shadow 0.2s;-webkit-appearance:none;}
+.form-input:focus{border-color:rgba(30,122,255,0.5);box-shadow:0 0 0 3px rgba(30,122,255,0.1);}
+.form-input::placeholder{color:var(--text-muted);}
+textarea.form-input{resize:none;line-height:1.6;}
+.form-row{display:flex;gap:10px;}
+.form-row .form-group{flex:1;}
+.project-item{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-card);border:1px solid var(--border-light);border-radius:16px;margin-bottom:10px;}
+.project-dot{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;margin-right:12px;flex-shrink:0;}
+.project-info{flex:1;}
+.project-item-name{font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:2px;}
+.project-item-rate{font-size:12px;color:var(--text-secondary);}
+.project-item-actions{display:flex;gap:6px;}
+.icon-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-elevated);color:var(--text-secondary);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;transition:all 0.15s;}
+.icon-btn:active{transform:scale(0.9);}
+.icon-btn.danger:hover{background:rgba(255,77,109,0.15);border-color:rgba(255,77,109,0.3);color:var(--danger);}
+.session-item{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;background:var(--bg-card);border:1px solid var(--border-light);border-radius:14px;margin-bottom:8px;}
+.session-left{flex:1;}
+.session-project{font-size:14px;font-weight:600;margin-bottom:3px;}
+.session-date{font-size:11px;color:var(--text-muted);}
+.session-right{text-align:right;}
+.session-duration{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:500;color:var(--text-secondary);margin-bottom:3px;}
+.session-amount{font-size:15px;font-weight:700;color:var(--accent-teal);}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.stat-card{background:var(--bg-card);border:1px solid var(--border-light);border-radius:16px;padding:16px;text-align:center;}
+.stat-label{font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;}
+.stat-value{font-size:22px;font-weight:700;letter-spacing:-0.5px;}
+.stat-value.green{color:var(--accent-teal);}
+.stat-value.blue{color:var(--accent-blue-light);}
+.bill-output{background:var(--bg-input);border:1px solid var(--border);border-radius:14px;padding:16px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-secondary);line-height:1.7;white-space:pre-wrap;word-break:break-word;max-height:200px;overflow-y:auto;}
+.remarks-card{background:var(--bg-card);border:1px solid var(--border-light);border-radius:16px;padding:16px 18px;margin-bottom:12px;position:relative;overflow:hidden;}
+.remarks-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent-blue);border-radius:3px 0 0 3px;}
+.remarks-card-title{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-blue-light);margin-bottom:8px;}
+.remarks-preview{font-size:13px;color:var(--text-secondary);line-height:1.7;white-space:pre-wrap;word-break:break-word;}
+.backup-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+.bill-top-actions{display:flex;gap:8px;margin-top:12px;margin-bottom:0;}
+.bill-top-actions .btn-primary{flex:1;}
+.colors{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+.color-swatch{width:28px;height:28px;border-radius:8px;cursor:pointer;border:2px solid transparent;transition:all 0.15s;}
+.color-swatch.selected{border-color:white;transform:scale(1.15);}
+.emoji-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+.emoji-btn{width:36px;height:36px;border-radius:8px;border:1px solid var(--border-light);background:var(--bg-elevated);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
+.emoji-btn.selected{border-color:rgba(30,122,255,0.5);background:rgba(30,122,255,0.1);}
+.divider{height:1px;background:var(--border-light);margin:16px 0;}
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--accent-teal);color:#002a21;font-weight:700;font-size:14px;padding:12px 24px;border-radius:30px;opacity:0;transition:all 0.3s;pointer-events:none;z-index:1000;box-shadow:0 8px 24px rgba(0,212,170,0.3);white-space:nowrap;max-width:92vw;text-align:center;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.empty-state{text-align:center;padding:40px 20px;color:var(--text-muted);}
+.empty-state .icon{font-size:40px;margin-bottom:12px;opacity:0.5;}
+.empty-state p{font-size:14px;}
+.modal-overlay{position:fixed;inset:0;background:rgba(5,13,26,0.85);backdrop-filter:blur(8px);z-index:100;display:none;align-items:flex-end;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--bg-card);border-radius:24px 24px 0 0;border:1px solid var(--border-light);border-bottom:none;padding:20px 20px 40px;width:100%;max-width:430px;animation:slideUp 0.3s cubic-bezier(0.32,0.72,0,1);}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-handle{width:40px;height:4px;background:var(--text-muted);border-radius:2px;margin:0 auto 20px;opacity:0.5;}
+.modal-title{font-size:18px;font-weight:700;margin-bottom:20px;}
+.filter-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;margin-bottom:12px;}
+.filter-row::-webkit-scrollbar{display:none;}
+.filter-chip{flex-shrink:0;padding:6px 14px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border-light);background:var(--bg-card);color:var(--text-muted);transition:all 0.15s;}
+.filter-chip.active{background:rgba(30,122,255,0.12);border-color:rgba(30,122,255,0.35);color:var(--accent-blue-light);}
+.bottom-safe{height:80px;}
+::-webkit-scrollbar{width:0;}
+#import-file-input{display:none;}
+
+/* ═══════════ PRO BADGE ═══════════ */
+.pro-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  background:linear-gradient(135deg,#f0b429,#e09800);
+  color:#1a0a00;font-size:10px;font-weight:800;
+  padding:3px 8px;border-radius:10px;letter-spacing:0.06em;
+  text-transform:uppercase;cursor:pointer;
+  box-shadow:0 2px 8px rgba(240,180,41,0.35);
+  transition:transform 0.15s,box-shadow 0.15s;
+  vertical-align:middle;
+}
+.pro-badge:active{transform:scale(0.94);}
+.free-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);
+  color:var(--text-muted);font-size:10px;font-weight:700;
+  padding:3px 8px;border-radius:10px;letter-spacing:0.05em;
+  text-transform:uppercase;cursor:pointer;transition:all 0.15s;
+}
+.free-badge:hover{border-color:rgba(30,122,255,0.4);color:var(--accent-blue-light);}
+
+/* project limit indicator */
+.proj-limit-bar{
+  display:flex;align-items:center;gap:8px;
+  padding:10px 14px;background:var(--bg-card);border:1px solid var(--border-light);
+  border-radius:12px;margin-bottom:12px;font-size:12px;color:var(--text-secondary);
+}
+.proj-limit-dots{display:flex;gap:4px;}
+.proj-dot{width:10px;height:10px;border-radius:50%;background:var(--border-light);transition:background 0.2s;}
+.proj-dot.used{background:var(--accent-blue);}
+.proj-dot.max{background:var(--danger);}
+
+/* ═══════════ PAYWALL OVERLAY ═══════════ */
+#paywall-overlay{
+  position:fixed;inset:0;z-index:500;
+  display:none;align-items:flex-end;justify-content:center;
+  background:rgba(3,8,18,0.75);backdrop-filter:blur(16px);
+}
+#paywall-overlay.open{display:flex;}
+.paywall-sheet{
+  width:100%;max-width:430px;
+  background:linear-gradient(170deg,#071228 0%,#0a1c3a 40%,#081628 100%);
+  border:1px solid rgba(30,122,255,0.2);
+  border-bottom:none;border-radius:28px 28px 0 0;
+  padding:0 0 40px;
+  position:relative;overflow:hidden;
+  animation:slideUp 0.38s cubic-bezier(0.32,0.72,0,1);
+}
+/* glassmorphism shimmer */
+.paywall-sheet::before{
+  content:'';position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 120% 60% at 50% -10%,rgba(30,122,255,0.18) 0%,transparent 60%),
+    radial-gradient(ellipse 60% 40% at 90% 110%,rgba(0,212,170,0.08) 0%,transparent 50%);
+  pointer-events:none;
+}
+.paywall-handle{width:40px;height:4px;background:rgba(255,255,255,0.15);border-radius:2px;margin:14px auto 0;}
+.paywall-header{text-align:center;padding:22px 24px 0;}
+.paywall-icon{font-size:48px;margin-bottom:8px;display:block;filter:drop-shadow(0 0 20px rgba(30,122,255,0.5));}
+.paywall-title{
+  font-size:24px;font-weight:800;letter-spacing:-0.5px;
+  background:linear-gradient(135deg,#f0f4ff 20%,#7fb3ff 80%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  margin-bottom:6px;
+}
+.paywall-sub{font-size:13px;color:var(--text-muted);line-height:1.5;padding:0 12px;}
+
+/* comparison table */
+.paywall-compare{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:10px;margin:20px 16px 0;
+}
+.pw-col{
+  background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);
+  border-radius:16px;padding:14px 12px;
+}
+.pw-col.pro{
+  background:rgba(30,122,255,0.08);border-color:rgba(30,122,255,0.3);
+  box-shadow:0 0 24px rgba(30,122,255,0.1);
+}
+.pw-col-title{
+  font-size:11px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;
+  margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.06);
+}
+.pw-col.free .pw-col-title{color:var(--text-muted);}
+.pw-col.pro .pw-col-title{color:var(--accent-blue-light);}
+.pw-row{
+  display:flex;align-items:flex-start;gap:7px;
+  font-size:12px;color:var(--text-secondary);line-height:1.4;
+  margin-bottom:9px;
+}
+.pw-row:last-child{margin-bottom:0;}
+.pw-row .ico{font-size:13px;flex-shrink:0;margin-top:1px;}
+.pw-col.free .pw-row .ico{filter:grayscale(1);opacity:0.5;}
+.pw-col.pro .pw-row{color:var(--text-primary);}
+
+/* price + CTA */
+.paywall-cta{padding:20px 16px 0;}
+.paywall-price{
+  text-align:center;margin-bottom:16px;
+}
+.paywall-price .amount{
+  font-size:36px;font-weight:800;letter-spacing:-1px;
+  background:linear-gradient(135deg,#f0f4ff,#7fb3ff);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.paywall-price .period{font-size:13px;color:var(--text-muted);margin-left:4px;}
+.paywall-price .tag{
+  display:inline-block;background:rgba(0,212,170,0.12);border:1px solid rgba(0,212,170,0.3);
+  color:var(--accent-teal);font-size:11px;font-weight:700;
+  padding:3px 10px;border-radius:20px;margin-top:6px;letter-spacing:0.04em;
+}
+
+/* breathing glow button */
+@keyframes breathe{
+  0%,100%{box-shadow:0 4px 24px rgba(30,122,255,0.45),0 0 0 0 rgba(30,122,255,0.3);}
+  50%{box-shadow:0 8px 40px rgba(30,122,255,0.65),0 0 0 8px rgba(30,122,255,0);}
+}
+.btn-paywall-upgrade{
+  width:100%;padding:18px;border:none;border-radius:16px;
+  background:linear-gradient(135deg,#2a8aff,#1060d0);
+  color:white;font-family:inherit;font-size:17px;font-weight:800;
+  letter-spacing:0.01em;cursor:pointer;
+  animation:breathe 2.4s ease-in-out infinite;
+  transition:transform 0.15s;position:relative;overflow:hidden;
+}
+.btn-paywall-upgrade::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(255,255,255,0.12),transparent 60%);
+  pointer-events:none;
+}
+.btn-paywall-upgrade:active{transform:scale(0.97);animation:none;box-shadow:0 2px 12px rgba(30,122,255,0.4);}
+
+.paywall-footer{
+  display:flex;justify-content:center;gap:6px;
+  margin-top:14px;flex-wrap:wrap;
+}
+.btn-paywall-restore{
+  background:transparent;border:none;
+  color:var(--text-muted);font-family:inherit;font-size:13px;font-weight:500;
+  cursor:pointer;padding:8px 12px;border-radius:10px;transition:color 0.15s;
+}
+.btn-paywall-restore:hover{color:var(--accent-blue-light);}
+.paywall-close-x{
+  position:absolute;top:14px;right:16px;
+  background:rgba(255,255,255,0.06);border:none;
+  color:var(--text-muted);font-size:16px;font-weight:600;
+  width:30px;height:30px;border-radius:50%;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all 0.15s;
+}
+.paywall-close-x:hover{background:rgba(255,255,255,0.1);color:var(--text-primary);}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="status-bar">
+    <span id="current-time">9:41</span>
+    <span>TimeBill Pro</span>
+    <span>●●●</span>
+  </div>
+  <div class="header">
+    <div class="app-title">TimeBill Pro</div>
+    <div class="header-right">
+      <div class="header-badge" id="running-badge">
+        <span class="running-dot"></span>
+        <span id="badge-text"></span>
+      </div>
+      <div id="tier-badge" onclick="openPaywall()" class="free-badge">FREE</div>
+      <div class="lang-switcher">
+        <button class="lang-btn" onclick="toggleLangMenu()" id="lang-btn-label">🌐 中文</button>
+        <div class="lang-dropdown" id="lang-dropdown">
+          <div class="lang-option" onclick="setLang('zh')"><span>🇨🇳</span> 中文</div>
+          <div class="lang-option" onclick="setLang('en')"><span>🇺🇸</span> English</div>
+          <div class="lang-option" onclick="setLang('ja')"><span>🇯🇵</span> 日本語</div>
+          <div class="lang-option" onclick="setLang('ko')"><span>🇰🇷</span> 한국어</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchTab('timer')" id="nav-timer"></button>
+    <button class="nav-tab" onclick="switchTab('projects')" id="nav-projects"></button>
+    <button class="nav-tab" onclick="switchTab('sessions')" id="nav-sessions"></button>
+    <button class="nav-tab" onclick="switchTab('bill')" id="nav-bill"></button>
+  </div>
+
+  <!-- TIMER -->
+  <div id="tab-timer" class="section active">
+    <div class="timer-display">
+      <div class="timer-project-name" id="timer-proj-name"></div>
+      <div class="timer-time" id="timer-display">00:00:00</div>
+      <div class="timer-earning" id="timer-earning"><span>¥</span>0.00</div>
+    </div>
+    <div class="section-label" id="lbl-select-project"></div>
+    <div class="project-selector" id="project-chips"></div>
+    <div style="display:flex;gap:10px;margin-bottom:12px;">
+      <button class="btn btn-primary" id="btn-start" onclick="startTimer()"></button>
+      <button class="btn btn-secondary btn-sm" id="btn-pause" onclick="pauseTimer()" style="display:none;width:auto;padding:14px 20px;"></button>
+    </div>
+    <button class="btn btn-secondary" id="btn-stop" onclick="stopTimer()" style="display:none;"></button>
+    <div class="divider"></div>
+    <div class="section-label" id="lbl-today"></div>
+    <div id="today-sessions"></div>
+  </div>
+
+  <!-- PROJECTS -->
+  <div id="tab-projects" class="section">
+    <div class="section-label" id="lbl-my-projects"></div>
+    <div class="proj-limit-bar" id="proj-limit-bar" style="display:none;">
+      <div class="proj-limit-dots" id="proj-limit-dots"></div>
+      <span id="proj-limit-text" style="flex:1;"></span>
+      <span onclick="openPaywall()" style="font-size:11px;font-weight:700;color:var(--accent-blue-light);cursor:pointer;">→ Pro</span>
+    </div>
+    <div id="project-list"></div>
+    <button class="btn btn-ghost" id="btn-new-project" onclick="openProjectModal()"></button>
+  </div>
+
+  <!-- SESSIONS -->
+  <div id="tab-sessions" class="section">
+    <div class="section-label" id="lbl-work-records"></div>
+    <div class="filter-row" id="session-filters"></div>
+    <div id="session-list"></div>
+  </div>
+
+  <!-- BILL -->
+  <div id="tab-bill" class="section">
+    <div class="section-label" id="lbl-bill-summary"></div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label" id="lbl-total-hours"></div>
+        <div class="stat-value blue" id="bill-hours">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label" id="lbl-receivable"></div>
+        <div class="stat-value green" id="bill-total">—</div>
+      </div>
+    </div>
+    <div class="stats-grid" id="bill-breakdown"></div>
+
+    <!-- Remarks -->
+    <div class="section-label" id="lbl-remarks-section"></div>
+    <div class="remarks-card" id="remarks-card" style="display:none;">
+      <div class="remarks-card-title" id="lbl-remarks-card-title"></div>
+      <div class="remarks-preview" id="remarks-preview-text"></div>
+    </div>
+    <button class="btn btn-ghost btn-sm" id="btn-edit-remarks" onclick="openRemarksModal()" style="width:100%;margin-bottom:16px;"></button>
+
+    <!-- Bill text -->
+    <div class="section-label" id="lbl-bill-text"></div>
+    <div class="bill-output" id="bill-text"></div>
+
+    <!-- Copy + PDF -->
+    <div class="bill-top-actions">
+      <button class="btn btn-primary" id="btn-copy-bill" onclick="copyBill()"></button>
+      <button class="btn btn-gold btn-sm" id="btn-export-pdf" onclick="showPdfPreview()" style="flex:0 0 auto;padding:14px 18px;"></button>
+    </div>
+
+    <!-- Data management -->
+    <div class="divider"></div>
+    <div class="section-label" id="lbl-data-section"></div>
+    <div class="backup-row">
+      <button class="btn btn-secondary" id="btn-export-json" onclick="exportJSON()"></button>
+      <button class="btn btn-secondary" id="btn-import-json" onclick="document.getElementById('import-file-input').click()"></button>
+    </div>
+    <button class="btn btn-danger" id="btn-clear" onclick="clearAll()"></button>
+  </div>
+
+  <div class="bottom-safe"></div>
+</div>
+
+<input type="file" id="import-file-input" accept=".json" onchange="importJSON(event)">
+<div class="toast" id="toast"></div>
+
+<!-- Project Modal -->
+<div class="modal-overlay" id="project-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-title"></div>
+    <div class="form-group">
+      <label class="form-label" id="lbl-project-name"></label>
+      <input type="text" class="form-input" id="input-project-name">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" id="lbl-hourly-rate"></label>
+        <input type="number" class="form-input" id="input-hourly-rate" placeholder="300" min="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label" id="lbl-currency"></label>
+        <select class="form-input" id="input-currency">
+          <option value="¥">¥ CNY</option>
+          <option value="$">$ USD</option>
+          <option value="€">€ EUR</option>
+          <option value="¥JP">¥ JPY</option>
+          <option value="₩">₩ KRW</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" id="lbl-icon"></label>
+      <div class="emoji-row" id="emoji-picker"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" id="lbl-color"></label>
+      <div class="colors" id="color-picker"></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px;">
+      <button class="btn btn-primary" id="btn-save-project" onclick="saveProject()"></button>
+      <button class="btn btn-secondary btn-sm" id="btn-cancel" onclick="closeModal()" style="width:auto;padding:14px 20px;"></button>
+    </div>
+  </div>
+</div>
+
+<!-- Remarks Modal -->
+<div class="modal-overlay" id="remarks-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="remarks-modal-title"></div>
+    <div class="form-group">
+      <label class="form-label" id="lbl-payee"></label>
+      <input type="text" class="form-input" id="input-payee">
+    </div>
+    <div class="form-group">
+      <label class="form-label" id="lbl-bank"></label>
+      <input type="text" class="form-input" id="input-bank">
+    </div>
+    <div class="form-group">
+      <label class="form-label" id="lbl-account"></label>
+      <input type="text" class="form-input" id="input-account" style="font-family:'JetBrains Mono',monospace;letter-spacing:0.05em;">
+    </div>
+    <div class="form-group">
+      <label class="form-label" id="lbl-extra-notes"></label>
+      <textarea class="form-input" id="input-extra-notes" rows="3"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px;">
+      <button class="btn btn-primary" id="btn-save-remarks" onclick="saveRemarks()"></button>
+      <button class="btn btn-secondary btn-sm" id="btn-cancel-remarks" onclick="closeRemarksModal()" style="width:auto;padding:14px 20px;"></button>
+    </div>
+  </div>
+</div>
+
+<!-- PDF Preview -->
+<div id="pdf-preview">
+  <button class="pdf-print-btn" id="pdf-print-btn" onclick="window.print()">🖨 Print / Save PDF</button>
+  <button class="pdf-close-btn" id="pdf-close-btn" onclick="closePdfPreview()">✕ Close</button>
+  <div class="pdf-wrap" id="pdf-content"></div>
+</div>
+
+<!-- Paywall -->
+<div id="paywall-overlay">
+  <div class="paywall-sheet">
+    <div class="paywall-handle"></div>
+    <button class="paywall-close-x" onclick="closePaywall()">✕</button>
+    <div class="paywall-header">
+      <span class="paywall-icon">⚡</span>
+      <div class="paywall-title" id="pw-title">解锁 TimeBill Pro</div>
+      <div class="paywall-sub" id="pw-sub">免费版已达到项目上限。升级解锁全部功能，一次付费，终身使用。</div>
+    </div>
+    <div class="paywall-compare">
+      <div class="pw-col free">
+        <div class="pw-col-title" id="pw-free-title">免费版</div>
+        <div class="pw-row"><span class="ico">📁</span><span id="pw-f1">最多 2 个项目</span></div>
+        <div class="pw-row"><span class="ico">💧</span><span id="pw-f2">导出带水印</span></div>
+        <div class="pw-row"><span class="ico">📊</span><span id="pw-f3">基础统计</span></div>
+        <div class="pw-row"><span class="ico">🔒</span><span id="pw-f4">无 PDF 导出</span></div>
+      </div>
+      <div class="pw-col pro">
+        <div class="pw-col-title" id="pw-pro-title">✦ Pro 版</div>
+        <div class="pw-row"><span class="ico">✅</span><span id="pw-p1">无限项目</span></div>
+        <div class="pw-row"><span class="ico">✅</span><span id="pw-p2">纯净导出·无水印</span></div>
+        <div class="pw-row"><span class="ico">✅</span><span id="pw-p3">高级报表 & PDF</span></div>
+        <div class="pw-row"><span class="ico">✅</span><span id="pw-p4">备份 & 数据迁移</span></div>
+      </div>
+    </div>
+    <div class="paywall-cta">
+      <div class="paywall-price">
+        <div><span class="amount" id="pw-price">$2.99</span><span class="period" id="pw-period">一次性买断</span></div>
+        <span class="tag" id="pw-tag">无订阅 · 买断终身</span>
+      </div>
+      <button class="btn-paywall-upgrade" id="pw-upgrade-btn" onclick="handlePurchase()">立即升级 ⚡</button>
+      <div class="paywall-footer">
+        <button class="btn-paywall-restore" id="pw-restore-btn" onclick="handleRestore()">恢复购买</button>
+        <button class="btn-paywall-restore" onclick="closePaywall()" id="pw-later-btn">以后再说</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── i18n ──────────────────────────────────────────────────────────────────────
+const LANGS={
+  zh:{flag:'🇨🇳',label:'中文',
+    nav_timer:'⏱ 计时',nav_projects:'📁 项目',nav_sessions:'📋 记录',nav_bill:'💰 账单',
+    timing:'计时中',no_project:'未选择项目',
+    lbl_select_project:'选择项目',btn_start:'▶ 开始计时',btn_stop:'⏹ 停止 & 记录',
+    btn_pause:'⏸',btn_resume:'▶',lbl_today:'今日记录',
+    lbl_my_projects:'我的项目',btn_new_project:'＋ 新建项目',
+    lbl_work_records:'工时记录',lbl_bill_summary:'账单汇总',
+    lbl_total_hours:'总工时',lbl_receivable:'应收金额',
+    lbl_bill_text:'结算文本',btn_copy_bill:'📋 复制结算文本',
+    btn_export_pdf:'📄 导出 PDF',
+    lbl_data_section:'数据管理',btn_export_json:'📦 导出备份',btn_import_json:'📥 导入备份',btn_clear:'清空记录',
+    lbl_remarks_section:'收款信息',lbl_remarks_card_title:'收款信息',btn_edit_remarks:'✎ 编辑收款信息',
+    remarks_modal_title:'收款账号 & 备注',lbl_payee:'收款人',lbl_bank:'开户银行',lbl_account:'收款账号',lbl_extra_notes:'其他备注',
+    btn_save_remarks:'保存',btn_cancel_remarks:'取消',
+    lbl_project_name:'项目名称',project_name_ph:'例：网站设计',lbl_hourly_rate:'时薪 (¥/h)',lbl_currency:'货币',lbl_icon:'图标',lbl_color:'颜色',
+    btn_save_project:'保存项目',btn_cancel:'取消',modal_new:'新建项目',modal_edit:'编辑项目',
+    filter_all:'全部',no_sessions:'暂无工时记录',no_today:'今天还没有记录',
+    no_projects_chip:'暂无项目 →',no_projects_list:'还没有项目\n点击下方按钮创建第一个',no_bill:'（暂无记录）',
+    toast_select:'请先选择一个项目',toast_short:'计时太短，请至少计时10秒',
+    toast_recorded:t=>`已记录 ${t}`,toast_created:'项目已创建',toast_updated:'项目已更新',toast_deleted:'项目已删除',
+    toast_copied:'结算文本已复制 ✓',toast_no_copy:'暂无可复制的内容',toast_cleared:'记录已清空',
+    toast_exported:'备份文件已下载',toast_imported:'备份导入成功 ✓',toast_import_err:'导入失败，请检查文件格式',
+    toast_remarks_saved:'收款信息已保存',
+    confirm_delete:'确认删除？相关记录将保留。',confirm_clear:'确认清空所有工时记录？此操作不可撤销。',
+    confirm_import:'导入将覆盖现有数据，是否继续？',
+    bill_subtitle:'工时计费结算单',bill_date_label:'结算日期',bill_hours_label:'工时',bill_amount_label:'金额',
+    bill_total_hours:'总工时',bill_total_amount:'应收合计',
+    bill_remarks_header:'【收款信息】',bill_payee_label:'收款人',bill_bank_label:'开户银行',bill_account_label:'收款账号',bill_notes_label:'备注',
+    bill_footer:'由 TimeBill Pro 生成',
+    bill_date_fmt:(y,m,d)=>`${y}年${m}月${d}日`,accum:'累计',dur_h:(h,m)=>h>0?`${h}h ${m}m`:`${m}m`,
+    pdf_title:'工时计费结算单',pdf_project:'项目',pdf_hours:'工时',pdf_rate:'时薪',pdf_amount:'金额',pdf_subtotal:'费用明细',pdf_total_label:'应收合计',pdf_payment:'收款信息',
+    pdf_payee:'收款人',pdf_bank:'开户银行',pdf_account:'收款账号',pdf_notes:'备注',
+    pdf_print_label:'🖨 打印 / 保存 PDF',pdf_close_label:'✕ 关闭',
+    demo:[{name:'UI设计',emoji:'🎨',color:'#1e7aff',rate:350,currency:'¥'},{name:'咨询顾问',emoji:'💼',color:'#00d4aa',rate:500,currency:'¥'},{name:'代码开发',emoji:'💻',color:'#a78bfa',rate:400,currency:'¥'}]},
+  en:{flag:'🇺🇸',label:'English',
+    nav_timer:'⏱ Timer',nav_projects:'📁 Projects',nav_sessions:'📋 Log',nav_bill:'💰 Bill',
+    timing:'Running',no_project:'No project selected',
+    lbl_select_project:'Select Project',btn_start:'▶ Start Timer',btn_stop:'⏹ Stop & Save',
+    btn_pause:'⏸',btn_resume:'▶',lbl_today:"Today's Log",
+    lbl_my_projects:'My Projects',btn_new_project:'＋ New Project',
+    lbl_work_records:'Work Log',lbl_bill_summary:'Bill Summary',
+    lbl_total_hours:'Total Hours',lbl_receivable:'Receivable',
+    lbl_bill_text:'Invoice Text',btn_copy_bill:'📋 Copy Invoice',
+    btn_export_pdf:'📄 Export PDF',
+    lbl_data_section:'Data Management',btn_export_json:'📦 Export Backup',btn_import_json:'📥 Import Backup',btn_clear:'Clear Records',
+    lbl_remarks_section:'Payment Info',lbl_remarks_card_title:'Payment Info',btn_edit_remarks:'✎ Edit Payment Info',
+    remarks_modal_title:'Payment Account & Notes',lbl_payee:'Payee Name',lbl_bank:'Bank Name',lbl_account:'Account Number',lbl_extra_notes:'Additional Notes',
+    btn_save_remarks:'Save',btn_cancel_remarks:'Cancel',
+    lbl_project_name:'Project Name',project_name_ph:'e.g. Web Design',lbl_hourly_rate:'Hourly Rate ($/h)',lbl_currency:'Currency',lbl_icon:'Icon',lbl_color:'Color',
+    btn_save_project:'Save Project',btn_cancel:'Cancel',modal_new:'New Project',modal_edit:'Edit Project',
+    filter_all:'All',no_sessions:'No records yet',no_today:'No records today',
+    no_projects_chip:'No projects →',no_projects_list:'No projects yet\nTap below to create one',no_bill:'(No records)',
+    toast_select:'Please select a project first',toast_short:'Too short — at least 10s required',
+    toast_recorded:t=>`Recorded ${t}`,toast_created:'Project created',toast_updated:'Project updated',toast_deleted:'Project deleted',
+    toast_copied:'Invoice copied ✓',toast_no_copy:'Nothing to copy',toast_cleared:'Records cleared',
+    toast_exported:'Backup downloaded',toast_imported:'Backup imported ✓',toast_import_err:'Import failed — invalid file',
+    toast_remarks_saved:'Payment info saved',
+    confirm_delete:'Delete project? Records will be kept.',confirm_clear:'Clear all records? Cannot be undone.',
+    confirm_import:'Import will overwrite current data. Continue?',
+    bill_subtitle:'Time Billing Invoice',bill_date_label:'Date',bill_hours_label:'Hours',bill_amount_label:'Amount',
+    bill_total_hours:'Total Hours',bill_total_amount:'Total Due',
+    bill_remarks_header:'[Payment Info]',bill_payee_label:'Payee',bill_bank_label:'Bank',bill_account_label:'Account',bill_notes_label:'Notes',
+    bill_footer:'Generated by TimeBill Pro',
+    bill_date_fmt:(y,m,d)=>`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`,accum:'Total',dur_h:(h,m)=>h>0?`${h}h ${m}m`:`${m}m`,
+    pdf_title:'Time Billing Invoice',pdf_project:'Project',pdf_hours:'Hours',pdf_rate:'Rate',pdf_amount:'Amount',pdf_subtotal:'Billing Details',pdf_total_label:'Total Due',pdf_payment:'Payment Info',
+    pdf_payee:'Payee',pdf_bank:'Bank',pdf_account:'Account No.',pdf_notes:'Notes',
+    pdf_print_label:'🖨 Print / Save PDF',pdf_close_label:'✕ Close',
+    demo:[{name:'UI Design',emoji:'🎨',color:'#1e7aff',rate:80,currency:'$'},{name:'Consulting',emoji:'💼',color:'#00d4aa',rate:120,currency:'$'},{name:'Development',emoji:'💻',color:'#a78bfa',rate:100,currency:'$'}]},
+  ja:{flag:'🇯🇵',label:'日本語',
+    nav_timer:'⏱ 計測',nav_projects:'📁 案件',nav_sessions:'📋 記録',nav_bill:'💰 請求',
+    timing:'計測中',no_project:'案件未選択',
+    lbl_select_project:'案件を選択',btn_start:'▶ 計測開始',btn_stop:'⏹ 停止 & 保存',
+    btn_pause:'⏸',btn_resume:'▶',lbl_today:'本日の記録',
+    lbl_my_projects:'マイ案件',btn_new_project:'＋ 新規案件',
+    lbl_work_records:'作業記録',lbl_bill_summary:'請求サマリー',
+    lbl_total_hours:'合計工数',lbl_receivable:'請求金額',
+    lbl_bill_text:'請求書テキスト',btn_copy_bill:'📋 請求書をコピー',
+    btn_export_pdf:'📄 PDF出力',
+    lbl_data_section:'データ管理',btn_export_json:'📦 バックアップ出力',btn_import_json:'📥 バックアップ読込',btn_clear:'記録をクリア',
+    lbl_remarks_section:'振込先情報',lbl_remarks_card_title:'振込先情報',btn_edit_remarks:'✎ 振込先を編集',
+    remarks_modal_title:'振込先 & 備考',lbl_payee:'受取人',lbl_bank:'銀行名',lbl_account:'口座番号',lbl_extra_notes:'その他備考',
+    btn_save_remarks:'保存',btn_cancel_remarks:'キャンセル',
+    lbl_project_name:'案件名',project_name_ph:'例：ウェブデザイン',lbl_hourly_rate:'時給 (¥/h)',lbl_currency:'通貨',lbl_icon:'アイコン',lbl_color:'カラー',
+    btn_save_project:'保存',btn_cancel:'キャンセル',modal_new:'新規案件',modal_edit:'案件を編集',
+    filter_all:'すべて',no_sessions:'記録がありません',no_today:'本日の記録なし',
+    no_projects_chip:'案件なし →',no_projects_list:'案件がありません\n下のボタンで作成してください',no_bill:'（記録なし）',
+    toast_select:'案件を選択してください',toast_short:'計測が短すぎます（10秒以上）',
+    toast_recorded:t=>`記録しました ${t}`,toast_created:'案件を作成しました',toast_updated:'案件を更新しました',toast_deleted:'案件を削除しました',
+    toast_copied:'請求書をコピーしました ✓',toast_no_copy:'コピーする内容がありません',toast_cleared:'記録をクリアしました',
+    toast_exported:'バックアップを出力しました',toast_imported:'バックアップを読み込みました ✓',toast_import_err:'読込失敗 — 形式が不正です',
+    toast_remarks_saved:'振込先情報を保存しました',
+    confirm_delete:'削除しますか？作業記録は保持されます。',confirm_clear:'すべての記録を削除しますか？',
+    confirm_import:'現在のデータを上書きします。続行しますか？',
+    bill_subtitle:'作業時間請求書',bill_date_label:'請求日',bill_hours_label:'工数',bill_amount_label:'金額',
+    bill_total_hours:'合計工数',bill_total_amount:'請求合計',
+    bill_remarks_header:'【振込先情報】',bill_payee_label:'受取人',bill_bank_label:'銀行名',bill_account_label:'口座番号',bill_notes_label:'備考',
+    bill_footer:'TimeBill Pro で生成',
+    bill_date_fmt:(y,m,d)=>`${y}年${m}月${d}日`,accum:'累計',dur_h:(h,m)=>h>0?`${h}時間${m}分`:`${m}分`,
+    pdf_title:'作業時間請求書',pdf_project:'案件',pdf_hours:'工数',pdf_rate:'時給',pdf_amount:'金額',pdf_subtotal:'明細',pdf_total_label:'請求合計',pdf_payment:'振込先情報',
+    pdf_payee:'受取人',pdf_bank:'銀行名',pdf_account:'口座番号',pdf_notes:'備考',
+    pdf_print_label:'🖨 印刷 / PDF保存',pdf_close_label:'✕ 閉じる',
+    demo:[{name:'UIデザイン',emoji:'🎨',color:'#1e7aff',rate:5000,currency:'¥JP'},{name:'コンサルティング',emoji:'💼',color:'#00d4aa',rate:8000,currency:'¥JP'},{name:'開発',emoji:'💻',color:'#a78bfa',rate:6000,currency:'¥JP'}]},
+  ko:{flag:'🇰🇷',label:'한국어',
+    nav_timer:'⏱ 타이머',nav_projects:'📁 프로젝트',nav_sessions:'📋 기록',nav_bill:'💰 청구',
+    timing:'측정중',no_project:'프로젝트 미선택',
+    lbl_select_project:'프로젝트 선택',btn_start:'▶ 시작',btn_stop:'⏹ 정지 & 저장',
+    btn_pause:'⏸',btn_resume:'▶',lbl_today:'오늘 기록',
+    lbl_my_projects:'내 프로젝트',btn_new_project:'＋ 새 프로젝트',
+    lbl_work_records:'작업 기록',lbl_bill_summary:'청구 요약',
+    lbl_total_hours:'총 시간',lbl_receivable:'청구 금액',
+    lbl_bill_text:'청구서 텍스트',btn_copy_bill:'📋 청구서 복사',
+    btn_export_pdf:'📄 PDF 내보내기',
+    lbl_data_section:'데이터 관리',btn_export_json:'📦 백업 내보내기',btn_import_json:'📥 백업 가져오기',btn_clear:'기록 초기화',
+    lbl_remarks_section:'결제 정보',lbl_remarks_card_title:'결제 정보',btn_edit_remarks:'✎ 결제 정보 편집',
+    remarks_modal_title:'계좌 & 메모',lbl_payee:'수취인',lbl_bank:'은행명',lbl_account:'계좌번호',lbl_extra_notes:'추가 메모',
+    btn_save_remarks:'저장',btn_cancel_remarks:'취소',
+    lbl_project_name:'프로젝트명',project_name_ph:'예: 웹 디자인',lbl_hourly_rate:'시급 (₩/h)',lbl_currency:'통화',lbl_icon:'아이콘',lbl_color:'색상',
+    btn_save_project:'저장',btn_cancel:'취소',modal_new:'새 프로젝트',modal_edit:'프로젝트 편집',
+    filter_all:'전체',no_sessions:'기록 없음',no_today:'오늘 기록 없음',
+    no_projects_chip:'프로젝트 없음 →',no_projects_list:'프로젝트가 없습니다\n아래 버튼으로 만들어보세요',no_bill:'(기록 없음)',
+    toast_select:'먼저 프로젝트를 선택하세요',toast_short:'너무 짧습니다 (10초 이상)',
+    toast_recorded:t=>`기록됨 ${t}`,toast_created:'프로젝트 생성됨',toast_updated:'업데이트됨',toast_deleted:'삭제됨',
+    toast_copied:'청구서 복사됨 ✓',toast_no_copy:'복사할 내용 없음',toast_cleared:'기록 초기화됨',
+    toast_exported:'백업 다운로드됨',toast_imported:'백업 가져오기 완료 ✓',toast_import_err:'가져오기 실패 — 잘못된 파일',
+    toast_remarks_saved:'결제 정보 저장됨',
+    confirm_delete:'삭제하시겠습니까?',confirm_clear:'모든 기록을 삭제하시겠습니까?',
+    confirm_import:'현재 데이터를 덮어씁니다. 계속하시겠습니까?',
+    bill_subtitle:'작업시간 청구서',bill_date_label:'청구일',bill_hours_label:'시간',bill_amount_label:'금액',
+    bill_total_hours:'총 시간',bill_total_amount:'청구 합계',
+    bill_remarks_header:'[결제 정보]',bill_payee_label:'수취인',bill_bank_label:'은행',bill_account_label:'계좌',bill_notes_label:'메모',
+    bill_footer:'TimeBill Pro 생성',
+    bill_date_fmt:(y,m,d)=>`${y}년 ${m}월 ${d}일`,accum:'누계',dur_h:(h,m)=>h>0?`${h}시간 ${m}분`:`${m}분`,
+    pdf_title:'작업시간 청구서',pdf_project:'프로젝트',pdf_hours:'시간',pdf_rate:'시급',pdf_amount:'금액',pdf_subtotal:'청구 명세',pdf_total_label:'청구 합계',pdf_payment:'결제 정보',
+    pdf_payee:'수취인',pdf_bank:'은행',pdf_account:'계좌번호',pdf_notes:'메모',
+    pdf_print_label:'🖨 인쇄 / PDF 저장',pdf_close_label:'✕ 닫기',
+    demo:[{name:'UI 디자인',emoji:'🎨',color:'#1e7aff',rate:50000,currency:'₩'},{name:'컨설팅',emoji:'💼',color:'#00d4aa',rate:80000,currency:'₩'},{name:'개발',emoji:'💻',color:'#a78bfa',rate:60000,currency:'₩'}]}
+};
+let currentLang=localStorage.getItem('timebill_lang')||'zh';
+const L=()=>LANGS[currentLang];
+const t=k=>typeof L()[k]==='function'?L()[k]:L()[k]||k;
+
+function applyLang(){
+  const l=L();
+  ['timer','projects','sessions','bill'].forEach(id=>{const el=document.getElementById('nav-'+id);if(el)el.textContent=l['nav_'+id];});
+  document.getElementById('lang-btn-label').textContent=`${l.flag} ${l.label}`;
+  document.getElementById('badge-text').textContent=l.timing;
+  if(!state.timer.running&&!state.timer.paused)document.getElementById('timer-proj-name').textContent=l.no_project;
+  const ids={
+    'lbl-select-project':'lbl_select_project','btn-start':'btn_start','btn-stop':'btn_stop',
+    'lbl-today':'lbl_today','lbl-my-projects':'lbl_my_projects','btn-new-project':'btn_new_project',
+    'lbl-work-records':'lbl_work_records','lbl-bill-summary':'lbl_bill_summary',
+    'lbl-total-hours':'lbl_total_hours','lbl-receivable':'lbl_receivable',
+    'lbl-bill-text':'lbl_bill_text','btn-copy-bill':'btn_copy_bill',
+    'btn-export-pdf':'btn_export_pdf','lbl-data-section':'lbl_data_section',
+    'btn-export-json':'btn_export_json','btn-import-json':'btn_import_json','btn-clear':'btn_clear',
+    'lbl-remarks-section':'lbl_remarks_section','lbl-remarks-card-title':'lbl_remarks_card_title',
+    'btn-edit-remarks':'btn_edit_remarks','remarks-modal-title':'remarks_modal_title',
+    'lbl-payee':'lbl_payee','lbl-bank':'lbl_bank','lbl-account':'lbl_account',
+    'lbl-extra-notes':'lbl_extra_notes','btn-save-remarks':'btn_save_remarks','btn-cancel-remarks':'btn_cancel_remarks',
+    'lbl-project-name':'lbl_project_name','lbl-hourly-rate':'lbl_hourly_rate','lbl-currency':'lbl_currency',
+    'lbl-icon':'lbl_icon','lbl-color':'lbl_color','btn-save-project':'btn_save_project','btn-cancel':'btn_cancel',
+    'modal-title':'modal_new'
+  };
+  Object.entries(ids).forEach(([id,key])=>{const el=document.getElementById(id);if(el&&l[key])el.textContent=l[key];});
+  document.getElementById('input-project-name').placeholder=l.project_name_ph;
+  document.querySelectorAll('.lang-option').forEach((el,i)=>el.classList.toggle('active',['zh','en','ja','ko'][i]===currentLang));
+  document.documentElement.lang={zh:'zh-CN',en:'en',ja:'ja',ko:'ko'}[currentLang];
+  document.getElementById('pdf-print-btn').textContent=l.pdf_print_label;
+  document.getElementById('pdf-close-btn').textContent=l.pdf_close_label;
+  localStorage.setItem('timebill_lang',currentLang);
+  renderAll();
+}
+function setLang(lang){currentLang=lang;applyLang();closeLangMenu();}
+function toggleLangMenu(){document.getElementById('lang-dropdown').classList.toggle('open');}
+function closeLangMenu(){document.getElementById('lang-dropdown').classList.remove('open');}
+document.addEventListener('click',e=>{if(!e.target.closest('.lang-switcher'))closeLangMenu();});
+
+// ─── STATE ─────────────────────────────────────────────────────────────────────
+const EMOJIS=['💼','🎨','✍️','💻','🔧','📊','📞','🚀','📐','🎯','📝','🔬'];
+const COLORS=['#1e7aff','#00d4aa','#f0b429','#ff4d6d','#a78bfa','#fb923c','#34d399','#f472b6','#60a5fa','#facc15'];
+let state={projects:[],sessions:[],isPro:false,timer:{running:false,paused:false,projectId:null,startTime:null,pausedTime:0,interval:null}};
+let remarks={payee:'',bank:'',account:'',notes:''};
+let selectedProjectId=null,selectedEmoji=EMOJIS[0],selectedColor=COLORS[0],editingProjectId=null,sessionFilter='all';
+
+function save(){
+  localStorage.setItem('timebill_projects',JSON.stringify(state.projects));
+  localStorage.setItem('timebill_sessions',JSON.stringify(state.sessions));
+  localStorage.setItem('timebill_remarks',JSON.stringify(remarks));
+  localStorage.setItem('timebill_isPro',JSON.stringify(state.isPro));
+}
+function load(){
+  try{state.projects=JSON.parse(localStorage.getItem('timebill_projects')||'[]');state.sessions=JSON.parse(localStorage.getItem('timebill_sessions')||'[]');}catch(e){state.projects=[];state.sessions=[];}
+  try{const r=JSON.parse(localStorage.getItem('timebill_remarks')||'{}');remarks={payee:'',bank:'',account:'',notes:'',...r};}catch(e){remarks={payee:'',bank:'',account:'',notes:''};} 
+  try{state.isPro=JSON.parse(localStorage.getItem('timebill_isPro')||'false');}catch(e){state.isPro=false;}
+}
+
+// ─── UTILS ─────────────────────────────────────────────────────────────────────
+function fmtDur(ms){const s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;return`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;}
+function fmtShort(ms){const tot=Math.floor(ms/60000),h=Math.floor(tot/60),m=tot%60;return L().dur_h(h,m);}
+function calcAmt(ms,rate){return((ms/3600000)*rate).toFixed(2);}
+function fmtDate(ts){const d=new Date(ts);const Y=d.getFullYear(),M=String(d.getMonth()+1).padStart(2,'0'),D=String(d.getDate()).padStart(2,'0'),hh=String(d.getHours()).padStart(2,'0'),mm=String(d.getMinutes()).padStart(2,'0');return currentLang==='en'?`${M}/${D}/${Y} ${hh}:${mm}`:`${Y}/${M}/${D} ${hh}:${mm}`;}
+function isToday(ts){return new Date(ts).toDateString()===new Date().toDateString();}
+function csym(c){return c==='¥JP'?'¥':c;}
+
+// ─── TIMER ─────────────────────────────────────────────────────────────────────
+function getElapsed(){if(!state.timer.running&&!state.timer.paused)return 0;if(state.timer.paused)return state.timer.pausedTime;return Date.now()-state.timer.startTime+state.timer.pausedTime;}
+function startTimer(){
+  if(!selectedProjectId){showToast(t('toast_select'));return;}
+  const p=state.projects.find(x=>x.id===selectedProjectId);if(!p)return;
+  state.timer={...state.timer,running:true,paused:false,projectId:selectedProjectId,startTime:Date.now()};
+  document.getElementById('btn-start').style.display='none';
+  document.getElementById('btn-pause').style.display='flex';
+  document.getElementById('btn-stop').style.display='flex';
+  document.getElementById('running-badge').style.display='flex';
+  document.getElementById('btn-pause').textContent=t('btn_pause');
+  state.timer.interval=setInterval(tickTimer,500);tickTimer();
+}
+function pauseTimer(){
+  if(state.timer.paused){state.timer={...state.timer,paused:false,running:true,startTime:Date.now()};document.getElementById('btn-pause').textContent=t('btn_pause');state.timer.interval=setInterval(tickTimer,500);}
+  else{state.timer.pausedTime=getElapsed();state.timer.paused=true;state.timer.running=false;clearInterval(state.timer.interval);document.getElementById('btn-pause').textContent=t('btn_resume');}
+}
+function stopTimer(){
+  const elapsed=getElapsed();if(elapsed<10000){showToast(t('toast_short'));return;}
+  clearInterval(state.timer.interval);
+  const p=state.projects.find(x=>x.id===state.timer.projectId);
+  state.sessions.unshift({id:Date.now().toString(),projectId:state.timer.projectId,projectName:p?p.name:'',projectColor:p?p.color:'#1e7aff',projectEmoji:p?p.emoji:'💼',duration:elapsed,rate:p?p.rate:0,currency:p?p.currency:'¥',amount:parseFloat(calcAmt(elapsed,p?p.rate:0)),startTs:state.timer.startTime,endTs:Date.now()});
+  save();state.timer={running:false,paused:false,projectId:null,startTime:null,pausedTime:0,interval:null};
+  document.getElementById('btn-start').style.display='flex';document.getElementById('btn-pause').style.display='none';document.getElementById('btn-stop').style.display='none';document.getElementById('running-badge').style.display='none';
+  document.getElementById('timer-display').textContent='00:00:00';document.getElementById('timer-earning').innerHTML='<span>¥</span>0.00';document.getElementById('timer-proj-name').textContent=t('no_project');
+  renderAll();showToast(L().toast_recorded(fmtShort(elapsed)));
+}
+function tickTimer(){
+  const elapsed=getElapsed(),p=state.projects.find(x=>x.id===state.timer.projectId);
+  document.getElementById('timer-display').textContent=fmtDur(elapsed);
+  if(p){document.getElementById('timer-earning').innerHTML=`<span>${csym(p.currency)}</span>${parseFloat(calcAmt(elapsed,p.rate)).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`;document.getElementById('timer-proj-name').textContent=`${p.emoji} ${p.name}`;}
+}
+
+// ─── PROJECTS ──────────────────────────────────────────────────────────────────
+function openProjectModal(id=null){
+  editingProjectId=id;document.getElementById('project-modal').classList.add('open');
+  if(id){const p=state.projects.find(x=>x.id===id);document.getElementById('modal-title').textContent=t('modal_edit');document.getElementById('input-project-name').value=p.name;document.getElementById('input-hourly-rate').value=p.rate;document.getElementById('input-currency').value=p.currency;selectedEmoji=p.emoji;selectedColor=p.color;}
+  else{document.getElementById('modal-title').textContent=t('modal_new');document.getElementById('input-project-name').value='';document.getElementById('input-hourly-rate').value='';selectedEmoji=EMOJIS[0];selectedColor=COLORS[0];}
+  document.getElementById('input-project-name').placeholder=t('project_name_ph');renderPickers();
+}
+function closeModal(){document.getElementById('project-modal').classList.remove('open');}
+const FREE_PROJECT_LIMIT=2;
+function saveProject(){
+  const name=document.getElementById('input-project-name').value.trim(),rate=parseFloat(document.getElementById('input-hourly-rate').value)||0,currency=document.getElementById('input-currency').value;
+  if(!name){showToast(t('project_name_ph'));return;}
+  // ── FREEMIUM GATE ──
+  if(!editingProjectId && !state.isPro && state.projects.length>=FREE_PROJECT_LIMIT){
+    closeModal();
+    openPaywall();
+    return;
+  }
+  if(editingProjectId){Object.assign(state.projects.find(x=>x.id===editingProjectId),{name,rate,currency,emoji:selectedEmoji,color:selectedColor});showToast(t('toast_updated'));}
+  else{state.projects.push({id:Date.now().toString(),name,rate,currency,emoji:selectedEmoji,color:selectedColor});showToast(t('toast_created'));}
+  save();closeModal();renderAll();
+}
+function deleteProject(id){
+  if(!confirm(t('confirm_delete')))return;
+  state.projects=state.projects.filter(p=>p.id!==id);if(selectedProjectId===id)selectedProjectId=null;save();renderAll();showToast(t('toast_deleted'));
+}
+
+// ─── PAYWALL & IAP ─────────────────────────────────────────────────────────────
+const PW_COPY={
+  zh:{title:'解锁 TimeBill Pro',sub:'免费版已达到项目上限。升级解锁全部功能，一次付费，终身使用。',freeTitle:'免费版',proTitle:'✦ Pro 版',f1:'最多 2 个项目',f2:'导出带水印',f3:'基础统计',f4:'无 PDF 导出',p1:'无限项目',p2:'纯净导出·无水印',p3:'高级报表 & PDF',p4:'备份 & 数据迁移',price:'$2.99',period:'一次性买断',tag:'无订阅 · 买断终身',upgrade:'立即升级 ⚡',restore:'恢复购买',later:'以后再说',thanks:'感谢支持！欢迎加入 Pro 🎉',restored:'已恢复购买 ✓'},
+  en:{title:'Unlock TimeBill Pro',sub:'You\'ve reached the free project limit. Upgrade once, use forever.',freeTitle:'Free',proTitle:'✦ Pro',f1:'Up to 2 projects',f2:'Watermarked exports',f3:'Basic stats',f4:'No PDF export',p1:'Unlimited projects',p2:'Clean exports · no watermark',p3:'Advanced reports & PDF',p4:'Backup & data migration',price:'$2.99',period:'one-time purchase',tag:'No subscription · lifetime',upgrade:'Upgrade Now ⚡',restore:'Restore Purchase',later:'Maybe Later',thanks:'Thank you! Welcome to Pro 🎉',restored:'Purchase restored ✓'},
+  ja:{title:'TimeBill Pro を解放',sub:'無料プランのプロジェクト上限に達しました。一度の購入で全機能が使えます。',freeTitle:'無料版',proTitle:'✦ Pro 版',f1:'最大 2 案件',f2:'透かし付き出力',f3:'基本統計',f4:'PDF出力なし',p1:'案件無制限',p2:'透かしなし・クリーン出力',p3:'高度レポート & PDF',p4:'バックアップ & 移行',price:'¥440',period:'買い切り',tag:'サブスクなし・永続利用',upgrade:'今すぐアップグレード ⚡',restore:'購入を復元',later:'あとで',thanks:'ありがとうございます！Proへようこそ 🎉',restored:'購入を復元しました ✓'},
+  ko:{title:'TimeBill Pro 잠금 해제',sub:'무료 프로젝트 한도에 도달했습니다. 한 번 결제로 영구 사용하세요.',freeTitle:'무료',proTitle:'✦ Pro',f1:'최대 2개 프로젝트',f2:'워터마크 포함 내보내기',f3:'기본 통계',f4:'PDF 내보내기 없음',p1:'프로젝트 무제한',p2:'워터마크 없는 내보내기',p3:'고급 보고서 & PDF',p4:'백업 & 데이터 이전',price:'₩3,900',period:'일회성 구매',tag:'구독 없음 · 평생 사용',upgrade:'지금 업그레이드 ⚡',restore:'구매 복원',later:'나중에',thanks:'감사합니다! Pro에 오신 걸 환영합니다 🎉',restored:'구매가 복원되었습니다 ✓'}
+};
+function openPaywall(){
+  const c=PW_COPY[currentLang]||PW_COPY.zh;
+  document.getElementById('pw-title').textContent=c.title;
+  document.getElementById('pw-sub').textContent=c.sub;
+  document.getElementById('pw-free-title').textContent=c.freeTitle;
+  document.getElementById('pw-pro-title').textContent=c.proTitle;
+  document.getElementById('pw-f1').textContent=c.f1;
+  document.getElementById('pw-f2').textContent=c.f2;
+  document.getElementById('pw-f3').textContent=c.f3;
+  document.getElementById('pw-f4').textContent=c.f4;
+  document.getElementById('pw-p1').textContent=c.p1;
+  document.getElementById('pw-p2').textContent=c.p2;
+  document.getElementById('pw-p3').textContent=c.p3;
+  document.getElementById('pw-p4').textContent=c.p4;
+  document.getElementById('pw-price').textContent=c.price;
+  document.getElementById('pw-period').textContent=c.period;
+  document.getElementById('pw-tag').textContent=c.tag;
+  document.getElementById('pw-upgrade-btn').textContent=c.upgrade;
+  document.getElementById('pw-restore-btn').textContent=c.restore;
+  document.getElementById('pw-later-btn').textContent=c.later;
+  document.getElementById('paywall-overlay').classList.add('open');
+}
+function closePaywall(){document.getElementById('paywall-overlay').classList.remove('open');}
+document.getElementById('paywall-overlay').addEventListener('click',function(e){if(e.target===this)closePaywall();});
+// Simulated IAP — swap for real StoreKit/RevenueCat bridge in production
+function handlePurchase(){
+  state.isPro=true;save();closePaywall();
+  updateTierUI();renderAll();
+  const c=PW_COPY[currentLang]||PW_COPY.zh;
+  showToast(c.thanks);
+}
+function handleRestore(){
+  // In production: query receipt / RevenueCat for entitlement
+  const c=PW_COPY[currentLang]||PW_COPY.zh;
+  if(state.isPro){showToast(c.restored);closePaywall();return;}
+  // Simulate restore finding no prior purchase
+  showToast(c.restored);
+  // For demo purposes, also grant Pro on restore
+  state.isPro=true;save();closePaywall();updateTierUI();renderAll();
+}
+function updateTierUI(){
+  const badge=document.getElementById('tier-badge');
+  if(state.isPro){
+    badge.className='pro-badge';
+    badge.textContent='PRO ✦';
+    badge.onclick=null;
+    badge.style.cursor='default';
+  } else {
+    badge.className='free-badge';
+    badge.textContent='FREE';
+    badge.onclick=openPaywall;
+    badge.style.cursor='pointer';
+  }
+  // Show/hide project limit bar
+  const bar=document.getElementById('proj-limit-bar');
+  if(!state.isPro){
+    bar.style.display='flex';
+    const dots=document.getElementById('proj-limit-dots');
+    const used=Math.min(state.projects.length,FREE_PROJECT_LIMIT);
+    dots.innerHTML=Array.from({length:FREE_PROJECT_LIMIT},(_,i)=>{
+      const cls=i<used?(used>=FREE_PROJECT_LIMIT?'proj-dot used max':'proj-dot used'):'proj-dot';
+      return`<div class="${cls}"></div>`;
+    }).join('');
+    const l=PW_COPY[currentLang]||PW_COPY.zh;
+    document.getElementById('proj-limit-text').textContent=`${used}/${FREE_PROJECT_LIMIT} ${l.f1.split(' ').slice(-1)[0]}`;
+  } else {
+    bar.style.display='none';
+  }
+}
+
+// ─── REMARKS ───────────────────────────────────────────────────────────────────
+function openRemarksModal(){
+  document.getElementById('input-payee').value=remarks.payee||'';
+  document.getElementById('input-bank').value=remarks.bank||'';
+  document.getElementById('input-account').value=remarks.account||'';
+  document.getElementById('input-extra-notes').value=remarks.notes||'';
+  document.getElementById('remarks-modal').classList.add('open');
+}
+function closeRemarksModal(){document.getElementById('remarks-modal').classList.remove('open');}
+function saveRemarks(){
+  remarks.payee=document.getElementById('input-payee').value.trim();
+  remarks.bank=document.getElementById('input-bank').value.trim();
+  remarks.account=document.getElementById('input-account').value.trim();
+  remarks.notes=document.getElementById('input-extra-notes').value.trim();
+  save();closeRemarksModal();renderBill();showToast(t('toast_remarks_saved'));
+}
+
+// ─── RENDERS ───────────────────────────────────────────────────────────────────
+function renderAll(){renderProjectChips();renderProjectList();renderSessions();renderBill();renderTodaySessions();updateTierUI();}
+function renderProjectChips(){
+  const el=document.getElementById('project-chips');
+  if(!state.projects.length){el.innerHTML=`<div class="project-chip" style="color:var(--text-muted);cursor:default;border-style:dashed;">${t('no_projects_chip')}</div>`;return;}
+  el.innerHTML=state.projects.map(p=>`<div class="project-chip ${selectedProjectId===p.id?'selected':''}" onclick="selectProject('${p.id}')" style="${selectedProjectId===p.id?`border-color:${p.color}55;color:${p.color};background:${p.color}18`:''}"> ${p.emoji} ${p.name}</div>`).join('');
+}
+function selectProject(id){
+  if(state.timer.running||state.timer.paused)return;
+  selectedProjectId=id;const p=state.projects.find(x=>x.id===id);
+  if(p){document.getElementById('timer-proj-name').textContent=`${p.emoji} ${p.name}`;document.getElementById('timer-earning').innerHTML=`<span>${csym(p.currency)}</span>0.00`;}
+  renderProjectChips();
+}
+function renderProjectList(){
+  const el=document.getElementById('project-list');
+  if(!state.projects.length){el.innerHTML=`<div class="empty-state"><div class="icon">📁</div><p>${t('no_projects_list').replace('\n','<br>')}</p></div>`;return;}
+  el.innerHTML=state.projects.map(p=>{const total=state.sessions.filter(s=>s.projectId===p.id).reduce((a,s)=>a+s.amount,0);const c=csym(p.currency);return`<div class="project-item" style="border-left:3px solid ${p.color};"><div class="project-dot" style="background:${p.color}22;color:${p.color}">${p.emoji}</div><div class="project-info"><div class="project-item-name">${p.name}</div><div class="project-item-rate">${c}${p.rate}/h · ${t('accum')} ${c}${total.toFixed(2)}</div></div><div class="project-item-actions"><div class="icon-btn" onclick="openProjectModal('${p.id}')">✎</div><div class="icon-btn danger" onclick="deleteProject('${p.id}')">✕</div></div></div>`;}).join('');
+}
+function renderSessions(){
+  const fEl=document.getElementById('session-filters'),lEl=document.getElementById('session-list');
+  const filters=[{id:'all',label:t('filter_all')},...state.projects.map(p=>({id:p.id,label:`${p.emoji} ${p.name}`}))];
+  fEl.innerHTML=filters.map(f=>`<div class="filter-chip ${sessionFilter===f.id?'active':''}" onclick="setFilter('${f.id}')">${f.label}</div>`).join('');
+  const sessions=sessionFilter==='all'?state.sessions:state.sessions.filter(s=>s.projectId===sessionFilter);
+  if(!sessions.length){lEl.innerHTML=`<div class="empty-state"><div class="icon">📋</div><p>${t('no_sessions')}</p></div>`;return;}
+  lEl.innerHTML=sessions.map(s=>`<div class="session-item"><div class="session-left"><div class="session-project" style="color:${s.projectColor}">${s.projectEmoji} ${s.projectName}</div><div class="session-date">${fmtDate(s.startTs)} — ${fmtDate(s.endTs)}</div></div><div class="session-right"><div class="session-duration">${fmtShort(s.duration)}</div><div class="session-amount">${csym(s.currency)}${s.amount.toFixed(2)}</div></div></div>`).join('');
+}
+function setFilter(id){sessionFilter=id;renderSessions();}
+function renderTodaySessions(){
+  const el=document.getElementById('today-sessions');
+  const today=state.sessions.filter(s=>isToday(s.startTs));
+  if(!today.length){el.innerHTML=`<div style="color:var(--text-muted);font-size:13px;padding:8px 0;">${t('no_today')}</div>`;return;}
+  el.innerHTML=today.slice(0,3).map(s=>`<div class="session-item"><div class="session-left"><div class="session-project" style="color:${s.projectColor}">${s.projectEmoji} ${s.projectName}</div><div class="session-date">${fmtDate(s.startTs)}</div></div><div class="session-right"><div class="session-duration">${fmtShort(s.duration)}</div><div class="session-amount">${csym(s.currency)}${s.amount.toFixed(2)}</div></div></div>`).join('');
+}
+function buildByProject(){
+  const byP={};
+  state.sessions.forEach(s=>{if(!byP[s.projectId])byP[s.projectId]={name:s.projectName,emoji:s.projectEmoji,color:s.projectColor,currency:s.currency,ms:0,amt:0};byP[s.projectId].ms+=s.duration;byP[s.projectId].amt+=s.amount;});
+  return byP;
+}
+function renderBill(){
+  const l=L();
+  const totalMs=state.sessions.reduce((a,s)=>a+s.duration,0),totalAmt=state.sessions.reduce((a,s)=>a+s.amount,0);
+  document.getElementById('bill-hours').textContent=fmtShort(totalMs);
+  document.getElementById('bill-total').textContent=`¥${totalAmt.toFixed(2)}`;
+  const byP=buildByProject();
+  document.getElementById('bill-breakdown').innerHTML=Object.values(byP).map(p=>`<div class="stat-card" style="border-left:3px solid ${p.color};"><div class="stat-label">${p.emoji} ${p.name}</div><div class="stat-value" style="font-size:16px;color:${p.color}">${csym(p.currency)}${p.amt.toFixed(2)}</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px">${fmtShort(p.ms)}</div></div>`).join('');
+
+  // Remarks preview card
+  const hasR=remarks.payee||remarks.bank||remarks.account||remarks.notes;
+  const rc=document.getElementById('remarks-card');
+  if(hasR){
+    rc.style.display='block';
+    let txt='';
+    if(remarks.payee)txt+=`${l.bill_payee_label}：${remarks.payee}\n`;
+    if(remarks.bank)txt+=`${l.bill_bank_label}：${remarks.bank}\n`;
+    if(remarks.account)txt+=`${l.bill_account_label}：${remarks.account}\n`;
+    if(remarks.notes)txt+=remarks.notes;
+    document.getElementById('remarks-preview-text').textContent=txt.trim();
+  }else{rc.style.display='none';}
+
+  // Bill text
+  if(!state.sessions.length){document.getElementById('bill-text').textContent=t('no_bill');return;}
+  const now=new Date();
+  const dateStr=l.bill_date_fmt(now.getFullYear(),now.getMonth()+1,now.getDate());
+  let txt=`═══════════════════════\n       TimeBill Pro\n   ${l.bill_subtitle}\n═══════════════════════\n${l.bill_date_label}：${dateStr}\n\n`;
+  Object.values(byP).forEach(p=>{txt+=`▸ ${p.emoji} ${p.name}\n  ${l.bill_hours_label}：${fmtShort(p.ms)}\n  ${l.bill_amount_label}：${csym(p.currency)}${p.amt.toFixed(2)}\n\n`;});
+  txt+=`───────────────────────\n${l.bill_total_hours}：${fmtShort(totalMs)}\n${l.bill_total_amount}：¥${totalAmt.toFixed(2)}\n`;
+  if(hasR){
+    txt+=`\n${l.bill_remarks_header}\n`;
+    if(remarks.payee)txt+=`${l.bill_payee_label}：${remarks.payee}\n`;
+    if(remarks.bank)txt+=`${l.bill_bank_label}：${remarks.bank}\n`;
+    if(remarks.account)txt+=`${l.bill_account_label}：${remarks.account}\n`;
+    if(remarks.notes)txt+=`${l.bill_notes_label}：${remarks.notes}\n`;
+  }
+  txt+=`═══════════════════════\n${l.bill_footer}`;
+  if(!state.isPro)txt+='\nPowered by TimeBill Pro (Free) — timebillpro.app';
+  document.getElementById('bill-text').textContent=txt;
+}
+function renderPickers(){
+  document.getElementById('emoji-picker').innerHTML=EMOJIS.map(e=>`<div class="emoji-btn ${selectedEmoji===e?'selected':''}" onclick="pickEmoji('${e}')">${e}</div>`).join('');
+  document.getElementById('color-picker').innerHTML=COLORS.map(c=>`<div class="color-swatch ${selectedColor===c?'selected':''}" style="background:${c}" onclick="pickColor('${c}')"></div>`).join('');
+}
+function pickEmoji(e){selectedEmoji=e;renderPickers();}
+function pickColor(c){selectedColor=c;renderPickers();}
+
+// ─── TABS ──────────────────────────────────────────────────────────────────────
+function switchTab(tab){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.getElementById('nav-'+tab).classList.add('active');
+  if(tab==='bill')renderBill();
+}
+
+// ─── BILL ──────────────────────────────────────────────────────────────────────
+function copyBill(){
+  const txt=document.getElementById('bill-text').textContent;
+  if(txt===t('no_bill')){showToast(t('toast_no_copy'));return;}
+  navigator.clipboard.writeText(txt).then(()=>showToast(t('toast_copied'))).catch(()=>{const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast(t('toast_copied'));});
+}
+function clearAll(){if(!confirm(t('confirm_clear')))return;state.sessions=[];save();renderAll();showToast(t('toast_cleared'));}
+
+// ─── PDF PREVIEW ───────────────────────────────────────────────────────────────
+function showPdfPreview(){
+  const l=L();
+  if(!state.sessions.length){showToast(t('toast_no_copy'));return;}
+  const now=new Date();
+  const dateStr=l.bill_date_fmt(now.getFullYear(),now.getMonth()+1,now.getDate());
+  const byP=buildByProject();
+  const totalMs=state.sessions.reduce((a,s)=>a+s.duration,0);
+  const totalAmt=state.sessions.reduce((a,s)=>a+s.amount,0);
+
+  const rows=Object.values(byP).map(p=>{
+    const c=csym(p.currency);
+    const projRate=state.projects.find(x=>x.name===p.name)?.rate||'—';
+    return`<tr>
+      <td style="font-size:18px;width:36px;text-align:center;">${p.emoji}</td>
+      <td style="font-weight:600;color:#111;">${p.name}</td>
+      <td style="font-family:'JetBrains Mono',monospace;color:#555;">${fmtShort(p.ms)}</td>
+      <td style="color:#555;">${c}${projRate}/h</td>
+      <td style="font-weight:700;color:#1e7aff;">${c}${p.amt.toFixed(2)}</td>
+    </tr>`;
+  }).join('');
+
+  const hasR=remarks.payee||remarks.bank||remarks.account||remarks.notes;
+  let remarksHtml='';
+  if(hasR){
+    let lines='';
+    if(remarks.payee)lines+=`<div><strong>${l.pdf_payee}：</strong>${remarks.payee}</div>`;
+    if(remarks.bank)lines+=`<div><strong>${l.pdf_bank}：</strong>${remarks.bank}</div>`;
+    if(remarks.account)lines+=`<div><strong>${l.pdf_account}：</strong><span style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;letter-spacing:0.08em;">${remarks.account}</span></div>`;
+    if(remarks.notes)lines+=`<div style="margin-top:8px;padding-top:8px;border-top:1px solid #dce8ff;color:#555;white-space:pre-wrap;">${remarks.notes}</div>`;
+    remarksHtml=`<div class="pdf-section-title" style="margin-top:8px;">${l.pdf_payment}</div><div class="pdf-remarks">${lines}</div>`;
+  }
+
+  document.getElementById('pdf-content').innerHTML=`
+    <div class="pdf-header">
+      <div>
+        <div class="pdf-logo">Time<span>Bill</span> Pro</div>
+        <div style="font-size:12px;color:#999;margin-top:2px;">timebill.pro</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="pdf-doc-title">${l.pdf_title}</div>
+        <div class="pdf-doc-date">${l.bill_date_label}：${dateStr}</div>
+      </div>
+    </div>
+
+    <div class="pdf-section-title">${l.pdf_subtotal}</div>
+    <table class="pdf-table">
+      <thead><tr>
+        <th></th>
+        <th>${l.pdf_project}</th>
+        <th>${l.pdf_hours}</th>
+        <th>${l.pdf_rate}</th>
+        <th>${l.pdf_amount}</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+
+    <div class="pdf-total-row">
+      <div class="pdf-total-box">
+        <div class="row"><span>${l.bill_total_hours}</span><span style="font-family:'JetBrains Mono',monospace;">${fmtShort(totalMs)}</span></div>
+        <div class="row big"><span>${l.pdf_total_label}</span><span>¥${totalAmt.toFixed(2)}</span></div>
+      </div>
+    </div>
+
+    ${remarksHtml}
+
+    <div class="pdf-footer">${l.bill_footer} · ${dateStr}${!state.isPro?'<br><span style="color:#bbb;font-size:10px;">Powered by TimeBill Pro (Free) — timebillpro.app</span>':''}</div>
+  `;
+  document.getElementById('pdf-preview').style.display='block';
+}
+function closePdfPreview(){document.getElementById('pdf-preview').style.display='none';}
+
+// ─── BACKUP ────────────────────────────────────────────────────────────────────
+function exportJSON(){
+  const backup={version:2,exported:new Date().toISOString(),projects:state.projects,sessions:state.sessions,remarks};
+  const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const d=new Date();
+  a.href=url;a.download=`timebill-backup-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.json`;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  showToast(t('toast_exported'));
+}
+function importJSON(evt){
+  const file=evt.target.files[0];if(!file)return;evt.target.value='';
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(!Array.isArray(data.projects)||!Array.isArray(data.sessions))throw new Error('invalid');
+      if(!confirm(t('confirm_import')))return;
+      state.projects=data.projects;state.sessions=data.sessions;
+      if(data.remarks)remarks={payee:'',bank:'',account:'',notes:'',...data.remarks};
+      save();applyLang();showToast(t('toast_imported'));
+    }catch(err){showToast(t('toast_import_err'));}
+  };reader.readAsText(file);
+}
+
+// ─── MISC ──────────────────────────────────────────────────────────────────────
+function showToast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2400);}
+function updateClock(){const d=new Date();document.getElementById('current-time').textContent=`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;}
+setInterval(updateClock,10000);updateClock();
+document.getElementById('project-modal').addEventListener('click',function(e){if(e.target===this)closeModal();});
+document.getElementById('remarks-modal').addEventListener('click',function(e){if(e.target===this)closeRemarksModal();});
+
+// ─── INIT ──────────────────────────────────────────────────────────────────────
+load();
+if(!state.projects.length){const demo=LANGS[currentLang].demo;state.projects=demo.map((p,i)=>({id:String(i+1),...p}));save();}
+applyLang();
+updateTierUI();
+</script>
+</body>
+</html>
