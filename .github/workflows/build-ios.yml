@@ -185,6 +185,45 @@ jobs:
     # 7. INSTALL SIGNING CERTIFICATE + PROVISIONING PROFILE
     #    Creates a temporary keychain so credentials are isolated to this job.
     # ══════════════════════════════════════════════════════════════════════════
+    - name: Debug - Check certificate file and variables
+      env:
+        CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
+        CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+      run: |
+        # 检查密钥是否为空
+        if [ -z "$CERTIFICATE_BASE64" ]; then
+          echo "❌ ERROR: IOS_CERTIFICATE_BASE64 密钥未设置或为空"
+          exit 1
+        fi
+        
+        if [ -z "$CERTIFICATE_PASSWORD" ]; then
+          echo "❌ ERROR: IOS_CERTIFICATE_PASSWORD 密钥未设置或为空"
+          exit 1
+        fi
+        
+        # 检查 base64 解码是否成功
+        echo "Decoding certificate..."
+        if echo "$CERTIFICATE_BASE64" | base64 -d > /tmp/signing_cert.p12 2>&1; then
+          CERT_SIZE=$(wc -c < /tmp/signing_cert.p12)
+          echo "✅ Base64 解码成功，文件大小: $CERT_SIZE 字节"
+        else
+          echo "❌ Base64 解码失败"
+          exit 1
+        fi
+        
+        # 检查密码长度（确保不是被截断的）
+        PASS_LEN=${#CERTIFICATE_PASSWORD}
+        echo "✅ 密码长度: $PASS_LEN 字符"
+        
+        # 尝试用 openssl 验证 p12 文件是否有效
+        echo "验证 .p12 文件完整性..."
+        if openssl pkcs12 -in /tmp/signing_cert.p12 -passin pass:"$CERTIFICATE_PASSWORD" -noout 2>&1; then
+          echo "✅ .p12 文件有效且密码正确"
+        else
+          echo "❌ .p12 文件验证失败，可能是密码错误或文件损坏"
+          openssl pkcs12 -in /tmp/signing_cert.p12 -passin pass:"$CERTIFICATE_PASSWORD" -noout 2>&1 || true
+          exit 1
+        fi
     - name: Install code-signing certificate
       env:
         CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
