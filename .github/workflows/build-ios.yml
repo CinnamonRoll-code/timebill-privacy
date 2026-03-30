@@ -75,7 +75,7 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ env.NODE_VERSION }}
-        cache: "npm"              # caches node_modules between runs
+    #     cache: "npm"              # caches node_modules between runs
 
     # ══════════════════════════════════════════════════════════════════════════
     # 4. SCAFFOLD CAPACITOR PROJECT (first run or cache miss)
