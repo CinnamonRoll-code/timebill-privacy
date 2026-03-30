@@ -1,0 +1,403 @@
+# ┌─────────────────────────────────────────────────────────────────────────────┐
+# │  TimeBill Pro — iOS Cloud Build Pipeline                                    │
+# │  Wraps TimeBillPro.html → Capacitor → Xcode → Release .ipa                 │
+# │                                                                             │
+# │  Required GitHub Secrets (Settings → Secrets → Actions):                   │
+# │  ┌──────────────────────────────┬──────────────────────────────────────┐   │
+# │  │ Secret Name                  │ How to obtain                        │   │
+# │  ├──────────────────────────────┼──────────────────────────────────────┤   │
+# │  │ APPLE_TEAM_ID                │ developer.apple.com → Membership     │   │
+# │  │ APPLE_BUNDLE_ID              │ e.g. com.yourname.timebillpro        │   │
+# │  │ IOS_CERTIFICATE_BASE64       │ Export .p12 → base64 (see note 1)   │   │
+# │  │ IOS_CERTIFICATE_PASSWORD     │ Password used when exporting .p12    │   │
+# │  │ IOS_PROVISION_BASE64         │ Download .mobileprovision → base64   │   │
+# │  └──────────────────────────────┴──────────────────────────────────────┘   │
+# │                                                                             │
+# │  Note 1 — base64-encode a file locally:                                    │
+# │    macOS:  base64 -i YourCert.p12 | pbcopy                                 │
+# │    Linux:  base64 -w 0 YourCert.p12                                        │
+# │                                                                             │
+# │  Artifact produced:  TimeBillPro-Release.ipa  (uploaded, ready for         │
+# │  manual upload to TestFlight via Transporter or Xcode Organizer)           │
+# └─────────────────────────────────────────────────────────────────────────────┘
+
+name: iOS Build — TimeBill Pro
+
+# ── Trigger ───────────────────────────────────────────────────────────────────
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:          # allow manual runs from the Actions tab
+
+# ── Concurrency guard: cancel in-flight build if a new push arrives ───────────
+concurrency:
+  group: ios-build-${{ github.ref }}
+  cancel-in-progress: true
+
+# ── Environment ───────────────────────────────────────────────────────────────
+env:
+  NODE_VERSION: "20"
+  XCODE_SCHEME: "App"           # default Capacitor scheme name
+  BUILD_CONFIGURATION: "Release"
+  DERIVED_DATA_PATH: "${{ github.workspace }}/DerivedData"
+  ARCHIVE_PATH: "${{ github.workspace }}/build/TimeBillPro.xcarchive"
+  IPA_PATH: "${{ github.workspace }}/build/ipa"
+  KEYCHAIN_NAME: "timebill-ci.keychain"
+  KEYCHAIN_PASSWORD: "ci-keychain-temp-pw"
+
+# ── Jobs ──────────────────────────────────────────────────────────────────────
+jobs:
+  build-ios:
+    name: Build Release IPA
+    runs-on: macos-latest          # macOS is required for Xcode toolchain
+
+    steps:
+    # ══════════════════════════════════════════════════════════════════════════
+    # 1. CHECKOUT
+    # ══════════════════════════════════════════════════════════════════════════
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # 2. SELECT XCODE VERSION
+    #    Pin to a stable version; update as needed (list: xcode-select -l)
+    # ══════════════════════════════════════════════════════════════════════════
+    - name: Select Xcode version
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: "15.4"     # update to latest stable as needed
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # 3. NODE.JS + PACKAGE MANAGER
+    # ══════════════════════════════════════════════════════════════════════════
+    - name: Set up Node.js ${{ env.NODE_VERSION }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: "npm"              # caches node_modules between runs
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # 4. SCAFFOLD CAPACITOR PROJECT (first run or cache miss)
+    #
+    #    Directory layout this step produces:
+    #      capacitor-app/
+    #        package.json
+    #        capacitor.config.json
+    #        www/
+    #          index.html          ← your TimeBillPro.html copied here
+    #        ios/
+    #          App/                ← Xcode project
+    # ══════════════════════════════════════════════════════════════════════════
+    - name: Scaffold Capacitor shell
+      run: |
+        mkdir -p capacitor-app/www
+
+        # ── Write package.json ──────────────────────────────────────────────
+        cat > capacitor-app/package.json << 'PKGJSON'
+        {
+          "name": "timebillpro",
+          "version": "1.0.0",
+          "private": true,
+          "dependencies": {
+            "@capacitor/core": "^6.0.0",
+            "@capacitor/ios":  "^6.0.0",
+            "@capacitor/cli":  "^6.0.0"
+          }
+        }
+        PKGJSON
+
+        # ── Install Capacitor packages ───────────────────────────────────────
+        cd capacitor-app
+        npm install --prefer-offline
+
+        # ── Write capacitor.config.json ─────────────────────────────────────
+        cat > capacitor.config.json << CAPCFG
+        {
+          "appId":   "${{ secrets.APPLE_BUNDLE_ID }}",
+          "appName": "TimeBill Pro",
+          "webDir":  "www",
+          "bundledWebRuntime": false,
+          "ios": {
+            "scheme": "App",
+            "contentInset": "always",
+            "backgroundColor": "#050d1a"
+          }
+        }
+        CAPCFG
+
+        # ── Copy your HTML into the webroot ─────────────────────────────────
+        # Capacitor requires the entry point to be named index.html
+        cp "${{ github.workspace }}/TimeBillPro.html" www/index.html
+
+        # ── Add the iOS platform (creates ios/ Xcode project) ───────────────
+        npx cap add ios
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # 5. INJECT APP ICON
+    #    Expects your repo to contain:
+    #      AppIcon.appiconset/
+    #        Contents.json
+    #        Icon-20@2x.png  Icon-20@3x.png  ... (all required sizes)
+    #    Copies the whole folder into the Xcode asset catalogue.
+    # ══════════════════════════════════════════════════════════════════════════
+    - name: Inject App Icon into Xcode project
+      run: |
+        ASSETS_DIR="capacitor-app/ios/App/App/Assets.xcassets"
+
+        # Remove default placeholder icon set
+        rm -rf "$ASSETS_DIR/AppIcon.appiconset"
+
+        # Copy your prepared icon set
+        cp -R "${{ github.workspace }}/AppIcon.appiconset" "$ASSETS_DIR/AppIcon.appiconset"
+
+        echo "✅ AppIcon.appiconset copied successfully."
+        ls -1 "$ASSETS_DIR/AppIcon.appiconset"
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # 6. PATCH Info.plist — bundle id, display name, version
+    # ══════════════════════════════════════════════════════════════════════════
+    - name: Patch Info.plist
+      run: |
+        INFO_PLIST="capacitor-app/ios/App/App/Info.plist"
+
+        /usr/libexec/PlistBuddy -c \
+          "Set :CFBundleIdentifier ${{ secrets.APPLE_BUNDLE_ID }}" \
+          "$INFO_PLIST"
+
+        /usr/libexec/PlistBuddy -c \
+          "Set :CFBundleDisplayName TimeBill Pro" \
+          "$INFO_PLIST"
+
+        /usr/libexec/PlistBuddy -c \
+          "Set :CFBundleShortVersionString 1.0.0" \
+          "$INFO_PLIST"
+
+        /usr/libexec/PlistBuddy -c \
+          "Set :CFBundleVersion ${{ github.run_number }}" \
+          "$INFO_PLIST"
+
+        echo "✅ Info.plist patched:"
+        /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$INFO_PLIST"
+        /usr/libexec/PlistBuddy -c "Print :CFBundleVersion"    "$INFO_PLIST"
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # 7. INSTALL SIGNING CERTIFICATE + PROVISIONING PROFILE
+    #    Creates a temporary keychain so credentials are isolated to this job.
+    # ══════════════════════════════════════════════════════════════════════════
+    - name: Install code-signing certificate
+      env:
+        CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
+        CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+      run: |
+        # Decode the .p12 from base64
+        echo "$CERTIFICATE_BASE64" | base64 --decode > /tmp/signing_cert.p12
+
+        # Create an isolated keychain for this CI job
+        security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
+        security set-keychain-settings -lut 21600 "$KEYCHAIN_NAME"
+        security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
+
+        # Import the certificate
+        security import /tmp/signing_cert.p12 \
+          -k "$KEYCHAIN_NAME" \
+          -P "$CERTIFICATE_PASSWORD" \
+          -T /usr/bin/codesign \
+          -T /usr/bin/security
+
+        # Allow codesign to access the keychain without UI prompts
+        security set-key-partition-list \
+          -S apple-tool:,apple: \
+          -s -k "$KEYCHAIN_PASSWORD" \
+          "$KEYCHAIN_NAME"
+
+        # Make this keychain the default search path
+        security list-keychains -d user -s "$KEYCHAIN_NAME" "login.keychain-db"
+
+        echo "✅ Certificate installed."
+
+    - name: Install provisioning profile
+      env:
+        PROVISION_BASE64: ${{ secrets.IOS_PROVISION_BASE64 }}
+      run: |
+        echo "$PROVISION_BASE64" | base64 --decode > /tmp/profile.mobileprovision
+
+        # Extract the UUID from the profile so we can name the file correctly
+        PROFILE_UUID=$(
+          /usr/libexec/PlistBuddy -c "Print :UUID" \
+            /dev/stdin <<< "$(security cms -D -i /tmp/profile.mobileprovision)"
+        )
+
+        mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+        cp /tmp/profile.mobileprovision \
+           "$HOME/Library/MobileDevice/Provisioning Profiles/${PROFILE_UUID}.mobileprovision"
+
+        echo "✅ Provisioning profile installed: $PROFILE_UUID"
+        echo "PROFILE_UUID=$PROFILE_UUID" >> "$GITHUB_ENV"
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # 8. RESOLVE SWIFT PACKAGE DEPENDENCIES (CocoaPods not needed for
+    #    plain Capacitor — uses SPM by default in Capacitor 6)
+    # ══════════════════════════════════════════════════════════════════════════
+    - name: Resolve Swift Package dependencies
+      working-directory: capacitor-app/ios/App
+      run: |
+        xcodebuild \
+          -resolvePackageDependencies \
+          -project App.xcodeproj \
+          -scheme "$XCODE_SCHEME" \
+          -derivedDataPath "$DERIVED_DATA_PATH" \
+          | xcpretty || true    # xcpretty is cosmetic; don't fail on its absence
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # 9. ARCHIVE (compile + link into .xcarchive)
+    # ══════════════════════════════════════════════════════════════════════════
+    - name: Archive iOS app
+      working-directory: capacitor-app/ios/App
+      run: |
+        mkdir -p "${{ env.DERIVED_DATA_PATH }}"
+        mkdir -p "$(dirname "${{ env.ARCHIVE_PATH }}")"
+
+        xcodebuild archive \
+          -project App.xcodeproj \
+          -scheme "$XCODE_SCHEME" \
+          -configuration "$BUILD_CONFIGURATION" \
+          -archivePath "${{ env.ARCHIVE_PATH }}" \
+          -derivedDataPath "${{ env.DERIVED_DATA_PATH }}" \
+          DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
+          PRODUCT_BUNDLE_IDENTIFIER="${{ secrets.APPLE_BUNDLE_ID }}" \
+          CODE_SIGN_STYLE="Manual" \
+          PROVISIONING_PROFILE="$PROFILE_UUID" \
+          CODE_SIGN_IDENTITY="iPhone Distribution" \
+          -allowProvisioningUpdates \
+          | xcpretty || xcodebuild archive \
+              -project App.xcodeproj \
+              -scheme "$XCODE_SCHEME" \
+              -configuration "$BUILD_CONFIGURATION" \
+              -archivePath "${{ env.ARCHIVE_PATH }}" \
+              -derivedDataPath "${{ env.DERIVED_DATA_PATH }}" \
+              DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
+              PRODUCT_BUNDLE_IDENTIFIER="${{ secrets.APPLE_BUNDLE_ID }}" \
+              CODE_SIGN_STYLE="Manual" \
+              PROVISIONING_PROFILE="$PROFILE_UUID" \
+              CODE_SIGN_IDENTITY="iPhone Distribution"
+
+        echo "✅ Archive created at ${{ env.ARCHIVE_PATH }}"
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # 10. EXPORT IPA
+    #     ExportOptions.plist controls signing method.
+    #     "ad-hoc"  → best for TestFlight-style device testing before review
+    #     "app-store" → for actual App Store / TestFlight submission
+    #     Switch the method below once you have an App Store distribution cert.
+    # ══════════════════════════════════════════════════════════════════════════
+    - name: Write ExportOptions.plist
+      run: |
+        mkdir -p "${{ env.IPA_PATH }}"
+        cat > /tmp/ExportOptions.plist << EXPORT
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+          "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+          <!-- Change to "app-store" when submitting to App Store / TestFlight -->
+          <key>method</key>
+          <string>ad-hoc</string>
+
+          <key>teamID</key>
+          <string>${{ secrets.APPLE_TEAM_ID }}</string>
+
+          <key>signingStyle</key>
+          <string>manual</string>
+
+          <key>provisioningProfiles</key>
+          <dict>
+            <key>${{ secrets.APPLE_BUNDLE_ID }}</key>
+            <string>${{ env.PROFILE_UUID }}</string>
+          </dict>
+
+          <key>compileBitcode</key>
+          <false/>
+
+          <key>stripSwiftSymbols</key>
+          <true/>
+
+          <key>uploadBitcode</key>
+          <false/>
+
+          <key>uploadSymbols</key>
+          <true/>
+        </dict>
+        </plist>
+        EXPORT
+
+        echo "✅ ExportOptions.plist written."
+
+    - name: Export IPA from archive
+      run: |
+        xcodebuild -exportArchive \
+          -archivePath "${{ env.ARCHIVE_PATH }}" \
+          -exportPath  "${{ env.IPA_PATH }}" \
+          -exportOptionsPlist /tmp/ExportOptions.plist \
+          | xcpretty || xcodebuild -exportArchive \
+              -archivePath "${{ env.ARCHIVE_PATH }}" \
+              -exportPath  "${{ env.IPA_PATH }}" \
+              -exportOptionsPlist /tmp/ExportOptions.plist
+
+        echo "✅ IPA exported:"
+        ls -lh "${{ env.IPA_PATH }}"
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # 11. RENAME IPA for clarity
+    # ══════════════════════════════════════════════════════════════════════════
+    - name: Rename IPA artifact
+      run: |
+        # Capacitor exports as "App.ipa"; rename to include build number
+        find "${{ env.IPA_PATH }}" -name "*.ipa" \
+          -exec mv {} "${{ env.IPA_PATH }}/TimeBillPro-Release-${{ github.run_number }}.ipa" \;
+
+        echo "📦 Final artifact:"
+        ls -lh "${{ env.IPA_PATH }}/"*.ipa
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # 12. UPLOAD IPA AS GITHUB ARTIFACT
+    #     Retained for 30 days by default; downloadable from the Actions tab.
+    # ══════════════════════════════════════════════════════════════════════════
+    - name: Upload IPA artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: TimeBillPro-Release-${{ github.run_number }}
+        path: ${{ env.IPA_PATH }}/*.ipa
+        retention-days: 30
+        if-no-files-found: error   # fail the job if no IPA was produced
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # 13. CLEANUP — remove keychain and temp files
+    #     Always runs so secrets aren't left on the runner even on failure.
+    # ══════════════════════════════════════════════════════════════════════════
+    - name: Cleanup signing credentials
+      if: always()
+      run: |
+        security delete-keychain "$KEYCHAIN_NAME" 2>/dev/null || true
+        rm -f /tmp/signing_cert.p12
+        rm -f /tmp/profile.mobileprovision
+        rm -f /tmp/ExportOptions.plist
+        echo "🧹 Cleanup complete."
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # 14. JOB SUMMARY — printed in the Actions UI after the run
+    # ══════════════════════════════════════════════════════════════════════════
+    - name: Print build summary
+      if: success()
+      run: |
+        echo "## ✅ TimeBill Pro — Build Succeeded" >> "$GITHUB_STEP_SUMMARY"
+        echo "" >> "$GITHUB_STEP_SUMMARY"
+        echo "| Field | Value |" >> "$GITHUB_STEP_SUMMARY"
+        echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+        echo "| Bundle ID | \`${{ secrets.APPLE_BUNDLE_ID }}\` |" >> "$GITHUB_STEP_SUMMARY"
+        echo "| Build Number | \`${{ github.run_number }}\` |" >> "$GITHUB_STEP_SUMMARY"
+        echo "| Configuration | \`${{ env.BUILD_CONFIGURATION }}\` |" >> "$GITHUB_STEP_SUMMARY"
+        echo "| Commit | \`${{ github.sha }}\` |" >> "$GITHUB_STEP_SUMMARY"
+        echo "| Artifact | \`TimeBillPro-Release-${{ github.run_number }}.ipa\` |" >> "$GITHUB_STEP_SUMMARY"
+        echo "" >> "$GITHUB_STEP_SUMMARY"
+        echo "Download the IPA from the **Artifacts** section above, then upload to TestFlight via **Transporter** or **Xcode Organizer**." >> "$GITHUB_STEP_SUMMARY"
