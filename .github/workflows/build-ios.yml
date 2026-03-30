@@ -191,7 +191,7 @@ jobs:
         CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
       run: |
         # Decode the .p12 from base64
-        echo "$CERTIFICATE_BASE64" | base64 --decode > /tmp/signing_cert.p12
+        echo "$CERTIFICATE_BASE64" | base64 -d > /tmp/signing_cert.p12
 
         # Create an isolated keychain for this CI job
         security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
