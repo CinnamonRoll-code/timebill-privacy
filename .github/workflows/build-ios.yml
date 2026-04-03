@@ -94,6 +94,7 @@ jobs:
         mkdir -p capacitor-app/www
 
         # ── Write package.json ──────────────────────────────────────────────
+        # IMPORTANT: heredoc body must NOT be indented — leading spaces break JSON parsing
         cat > capacitor-app/package.json << 'PKGJSON'
         {
           "name": "timebillpro",
@@ -109,10 +110,15 @@ jobs:
 
         # ── Install Capacitor packages ───────────────────────────────────────
         cd capacitor-app
-        npm install --prefer-offline
+        npm install
+
+        # Verify packages installed correctly
+        echo "--- Installed Capacitor packages ---"
+        ls node_modules/@capacitor/
 
         # ── Write capacitor.config.json ─────────────────────────────────────
-        cat > capacitor.config.json << CAPCFG
+        # IMPORTANT: no leading spaces inside heredoc body
+        cat > capacitor.config.json << 'CAPCFG'
         {
           "appId":   "${{ secrets.APPLE_BUNDLE_ID }}",
           "appName": "TimeBill Pro",
@@ -126,12 +132,23 @@ jobs:
         }
         CAPCFG
 
+        # Validate JSON is parseable
+        node -e "JSON.parse(require('fs').readFileSync('capacitor.config.json','utf8'))" && \
+          echo "✅ capacitor.config.json is valid JSON"
+
         # ── Copy your HTML into the webroot ─────────────────────────────────
-        # Capacitor requires the entry point to be named index.html
         cp "${{ github.workspace }}/index.html" www/index.html
 
-        # ── Add the iOS platform (creates ios/ Xcode project) ───────────────
+        # ── Add iOS platform (creates the Xcode project skeleton) ────────────
         npx cap add ios
+
+        # ── CRITICAL: sync assets + register Capacitor SPM deps into Xcode ───
+        # cap add ios only creates the skeleton. Without cap sync, Xcode cannot
+        # locate the 'Capacitor' Swift module → "Unable to find module dependency"
+        npx cap sync ios
+
+        echo "--- Xcode project after sync ---"
+        ls ios/App/
 
     # ══════════════════════════════════════════════════════════════════════════
     # 5. INJECT APP ICON
@@ -281,12 +298,21 @@ jobs:
     - name: Resolve Swift Package dependencies
       working-directory: capacitor-app/ios/App
       run: |
+        # cap sync already wrote Package.resolved, so this step just pre-fetches
+        # the resolved packages into DerivedData to speed up the archive step.
+        # -skipPackagePluginValidation avoids CI permission prompts.
+        # -onlyUsePackageVersionsFromResolvedFile pins exact versions from sync.
         xcodebuild \
           -resolvePackageDependencies \
           -project App.xcodeproj \
           -scheme "$XCODE_SCHEME" \
           -derivedDataPath "$DERIVED_DATA_PATH" \
-          -skipPackagePluginValidation
+          -skipPackagePluginValidation \
+          -onlyUsePackageVersionsFromResolvedFile
+
+        echo "✅ Swift Package dependencies resolved."
+        # Show what was resolved (useful for debugging)
+        find "$DERIVED_DATA_PATH" -name "*.resolved" 2>/dev/null | head -5
 
     # ══════════════════════════════════════════════════════════════════════════
     # 9. ARCHIVE (compile + link into .xcarchive)
