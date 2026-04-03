@@ -128,7 +128,7 @@ jobs:
 
         # ── Copy your HTML into the webroot ─────────────────────────────────
         # Capacitor requires the entry point to be named index.html
-        cp "${{ github.workspace }}/TimeBillPro.html" www/index.html
+        cp "${{ github.workspace }}/index.html" www/index.html
 
         # ── Add the iOS platform (creates ios/ Xcode project) ───────────────
         npx cap add ios
