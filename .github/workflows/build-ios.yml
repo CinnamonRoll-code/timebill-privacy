@@ -324,17 +324,17 @@ jobs:
         mkdir -p "$(dirname "${{ env.ARCHIVE_PATH }}")"
 
         xcodebuild archive \
-          -workspace App.xcworkspace \
+          -project App.xcodeproj \
           -scheme "$XCODE_SCHEME" \
+          -configuration "$BUILD_CONFIGURATION" \
           -archivePath "${{ env.ARCHIVE_PATH }}" \
+          -derivedDataPath "${{ env.DERIVED_DATA_PATH }}" \
           -destination "generic/platform=iOS" \
-          -configuration Release \
-          CODE_SIGNING_REQUIRED=YES \
-          CODE_SIGNING_ALLOWED=YES \
           CODE_SIGN_STYLE="Manual" \
           CODE_SIGN_IDENTITY="Apple Distribution" \
+          PROVISIONING_PROFILE_SPECIFIER="$PROFILE_UUID" \
           DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
-          PROVISIONING_PROFILE_SPECIFIER="$PROFILE_UUID"
+          PRODUCT_BUNDLE_IDENTIFIER="${{ secrets.APPLE_BUNDLE_ID }}"
 
         echo "✅ Archive created at ${{ env.ARCHIVE_PATH }}"
 
