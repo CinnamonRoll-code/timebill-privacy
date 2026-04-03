@@ -96,17 +96,17 @@ jobs:
         # ── Write package.json ──────────────────────────────────────────────
         # IMPORTANT: heredoc body must NOT be indented — leading spaces break JSON parsing
         cat > capacitor-app/package.json << 'PKGJSON'
-        {
-          "name": "timebillpro",
-          "version": "1.0.0",
-          "private": true,
-          "dependencies": {
-            "@capacitor/core": "^6.0.0",
-            "@capacitor/ios":  "^6.0.0",
-            "@capacitor/cli":  "^6.0.0"
-          }
-        }
-        PKGJSON
+{
+  "name": "timebillpro",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/ios":  "^6.0.0",
+    "@capacitor/cli":  "^6.0.0"
+  }
+}
+PKGJSON
 
         # ── Install Capacitor packages ───────────────────────────────────────
         cd capacitor-app
@@ -119,18 +119,18 @@ jobs:
         # ── Write capacitor.config.json ─────────────────────────────────────
         # IMPORTANT: no leading spaces inside heredoc body
         cat > capacitor.config.json << 'CAPCFG'
-        {
-          "appId":   "${{ secrets.APPLE_BUNDLE_ID }}",
-          "appName": "TimeBill Pro",
-          "webDir":  "www",
-          "bundledWebRuntime": false,
-          "ios": {
-            "scheme": "App",
-            "contentInset": "always",
-            "backgroundColor": "#050d1a"
-          }
-        }
-        CAPCFG
+{
+  "appId":   "${{ secrets.APPLE_BUNDLE_ID }}",
+  "appName": "TimeBill Pro",
+  "webDir":  "www",
+  "bundledWebRuntime": false,
+  "ios": {
+    "scheme": "App",
+    "contentInset": "always",
+    "backgroundColor": "#050d1a"
+  }
+}
+CAPCFG
 
         # Validate JSON is parseable
         node -e "JSON.parse(require('fs').readFileSync('capacitor.config.json','utf8'))" && \
