@@ -286,7 +286,6 @@ jobs:
           -project App.xcodeproj \
           -scheme "$XCODE_SCHEME" \
           -derivedDataPath "$DERIVED_DATA_PATH" \
-          | xcpretty || true    # xcpretty is cosmetic; don't fail on its absence
 
     # ══════════════════════════════════════════════════════════════════════════
     # 9. ARCHIVE (compile + link into .xcarchive)
@@ -341,7 +340,7 @@ jobs:
         <dict>
           <!-- Change to "app-store" when submitting to App Store / TestFlight -->
           <key>method</key>
-          <string>ad-hoc</string>
+          <string>app-store</string>
 
           <key>teamID</key>
           <string>${{ secrets.APPLE_TEAM_ID }}</string>
