@@ -303,24 +303,12 @@ jobs:
           -configuration "$BUILD_CONFIGURATION" \
           -archivePath "${{ env.ARCHIVE_PATH }}" \
           -derivedDataPath "${{ env.DERIVED_DATA_PATH }}" \
-          -skipPackagePluginValidation \
-          DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
-          PRODUCT_BUNDLE_IDENTIFIER="${{ secrets.APPLE_BUNDLE_ID }}" \
+          -destination "generic/platform=iOS" \
           CODE_SIGN_STYLE="Manual" \
-          PROVISIONING_PROFILE="$PROFILE_UUID" \
-          CODE_SIGN_IDENTITY="iPhone Distribution" \
-          -allowProvisioningUpdates \
-          | xcpretty || xcodebuild archive \
-              -project App.xcodeproj \
-              -scheme "$XCODE_SCHEME" \
-              -configuration "$BUILD_CONFIGURATION" \
-              -archivePath "${{ env.ARCHIVE_PATH }}" \
-              -derivedDataPath "${{ env.DERIVED_DATA_PATH }}" \
-              DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
-              PRODUCT_BUNDLE_IDENTIFIER="${{ secrets.APPLE_BUNDLE_ID }}" \
-              CODE_SIGN_STYLE="Manual" \
-              PROVISIONING_PROFILE="$PROFILE_UUID" \
-              CODE_SIGN_IDENTITY="iPhone Distribution"
+          CODE_SIGN_IDENTITY="Apple Distribution" \
+          PROVISIONING_PROFILE_SPECIFIER="$PROFILE_UUID" \
+          DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
+          PRODUCT_BUNDLE_IDENTIFIER="${{ secrets.APPLE_BUNDLE_ID }}"
 
         echo "✅ Archive created at ${{ env.ARCHIVE_PATH }}"
 
@@ -333,44 +321,27 @@ jobs:
     # ══════════════════════════════════════════════════════════════════════════
     - name: Write ExportOptions.plist
       run: |
-        mkdir -p "${{ env.IPA_PATH }}"
-        cat > /tmp/ExportOptions.plist << EXPORT
+        cat <<EOF > /tmp/ExportOptions.plist
         <?xml version="1.0" encoding="UTF-8"?>
-        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
-          "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
         <plist version="1.0">
         <dict>
-          <!-- Change to "app-store" when submitting to App Store / TestFlight -->
           <key>method</key>
           <string>app-store</string>
-
           <key>teamID</key>
           <string>${{ secrets.APPLE_TEAM_ID }}</string>
-
           <key>signingStyle</key>
           <string>manual</string>
-
           <key>provisioningProfiles</key>
           <dict>
             <key>${{ secrets.APPLE_BUNDLE_ID }}</key>
-            <string>${{ env.PROFILE_UUID }}</string>
+            <string>$PROFILE_UUID</string>
           </dict>
-
-          <key>compileBitcode</key>
-          <false/>
-
-          <key>stripSwiftSymbols</key>
-          <true/>
-
-          <key>uploadBitcode</key>
-          <false/>
-
-          <key>uploadSymbols</key>
+          <key>manageAppVersionAndBuildNumber</key>
           <true/>
         </dict>
         </plist>
-        EXPORT
-
+        EOF
         echo "✅ ExportOptions.plist written."
 
     - name: Export IPA from archive
