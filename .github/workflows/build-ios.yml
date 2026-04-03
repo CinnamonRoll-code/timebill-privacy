@@ -286,6 +286,7 @@ jobs:
           -project App.xcodeproj \
           -scheme "$XCODE_SCHEME" \
           -derivedDataPath "$DERIVED_DATA_PATH" \
+          -skipPackagePluginValidation
 
     # ══════════════════════════════════════════════════════════════════════════
     # 9. ARCHIVE (compile + link into .xcarchive)
@@ -302,6 +303,7 @@ jobs:
           -configuration "$BUILD_CONFIGURATION" \
           -archivePath "${{ env.ARCHIVE_PATH }}" \
           -derivedDataPath "${{ env.DERIVED_DATA_PATH }}" \
+          -skipPackagePluginValidation \
           DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
           PRODUCT_BUNDLE_IDENTIFIER="${{ secrets.APPLE_BUNDLE_ID }}" \
           CODE_SIGN_STYLE="Manual" \
