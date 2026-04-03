@@ -324,7 +324,7 @@ jobs:
         mkdir -p "$(dirname "${{ env.ARCHIVE_PATH }}")"
 
         xcodebuild archive \
-          -project App.xcodeproj \
+          -project App.xcworkspace \
           -scheme "$XCODE_SCHEME" \
           -configuration "$BUILD_CONFIGURATION" \
           -archivePath "${{ env.ARCHIVE_PATH }}" \
