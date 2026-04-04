@@ -327,6 +327,21 @@ jobs:
     # ══════════════════════════════════════════════════════════════════════════
     # 9. ARCHIVE (compile + link into .xcarchive)
     # ══════════════════════════════════════════════════════════════════════════
+    - name: Clean Xcode provisioning profile settings
+      working-directory: capacitor-app/ios/App
+      run: |
+        # 清除 Pods.xcodeproj 中的手动配置文件设置
+        if [ -f "Pods/Pods.xcodeproj/project.pbxproj" ]; then
+          sed -i '' 's/PROVISIONING_PROFILE\[sdk=iphoneos\*\] = ".*";//g' Pods/Pods.xcodeproj/project.pbxproj
+          sed -i '' 's/PROVISIONING_PROFILE = ".*";//g' Pods/Pods.xcodeproj/project.pbxproj
+          echo "✅ Cleared provisioning profile settings from Pods project"
+        fi
+        
+        # 使用 xcodebuild 清除所有 target 的配置文件设置
+        for target in $(xcodebuild -workspace App.xcworkspace -list -json | jq -r '.project.targets[]'); do
+          xcodebuild -workspace App.xcworkspace -target "$target" -showBuildSettings | grep PROVISIONING_PROFILE || true
+        done
+    
     - name: Archive iOS app
       working-directory: capacitor-app/ios/App
       run: |
