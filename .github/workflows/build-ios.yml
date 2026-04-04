@@ -305,7 +305,12 @@ jobs:
         cd ios/App
         pod install --repo-update
         
-        echo "✅ CocoaPods dependencies installed"
+        # 安装后立即清除 Pods targets 的代码签名设置
+        sed -i '' '/PROVISIONING_PROFILE/d' Pods/Pods.xcodeproj/project.pbxproj
+        sed -i '' '/CODE_SIGN_STYLE = Manual/d' Pods/Pods.xcodeproj/project.pbxproj
+        sed -i '' '/CODE_SIGN_IDENTITY =/d' Pods/Pods.xcodeproj/project.pbxproj
+        
+        echo "✅ CocoaPods dependencies installed and cleaned"
         ls -la Pods/Capacitor/ 2>/dev/null || echo "⚠️ Capacitor pod installed"
         
     - name: Resolve Swift Package dependencies
