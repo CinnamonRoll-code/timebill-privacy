@@ -283,22 +283,31 @@ jobs:
     # 8. RESOLVE SWIFT PACKAGE DEPENDENCIES (CocoaPods not needed for
     #    plain Capacitor — uses SPM by default in Capacitor 6)
     # ══════════════════════════════════════════════════════════════════════════
-    - name: Install CocoaPods dependencies  # 第 8 步改为：
+    - name: Install CocoaPods dependencies
       working-directory: capacitor-app/ios/App
       run: |
-        # 现在安装 CocoaPods（在签名配置清理之前）
         sudo gem install cocoapods
         pod install --repo-update
         echo "✅ CocoaPods installed successfully"
         
         if [ -f "Pods/Pods.xcodeproj/project.pbxproj" ]; then
+          # 使用 xcconfig 覆盖所有 Pod 的签名设置，而不是尝试删除
+          cat > Pods/Pods.xcodeproj/Config.xcconfig << 'EOF'
+          CODE_SIGN_STYLE = Automatic
+          CODE_SIGN_IDENTITY = 
+          PROVISIONING_PROFILE = 
+          PROVISIONING_PROFILE_SPECIFIER = 
+          CODE_SIGNING_REQUIRED = NO
+          EOF
+          
+          # 在 project.pbxproj 中引用该配置文件
           perl -i -pe 's/CODE_SIGN_STYLE = Manual;//g' Pods/Pods.xcodeproj/project.pbxproj
-          perl -i -pe 's/PROVISIONING_PROFILE\[sdk=iphoneos\*\] = .*?;//g' Pods/Pods.xcodeproj/project.pbxproj
-          perl -i -pe 's/PROVISIONING_PROFILE = .*?;//g' Pods/Pods.xcodeproj/project.pbxproj
-          perl -i -pe 's/CODE_SIGN_IDENTITY = .*?;//g' Pods/Pods.xcodeproj/project.pbxproj
-          perl -i -pe 's/DEVELOPMENT_TEAM = .*?;//g' Pods/Pods.xcodeproj/project.pbxproj
+          perl -i -pe 's/(PROVISIONING_PROFILE.*?=.*?;)//g' Pods/Pods.xcodeproj/project.pbxproj
+          perl -i -pe 's/(CODE_SIGN_IDENTITY.*?=.*?;)//g' Pods/Pods.xcodeproj/project.pbxproj
+          perl -i -pe 's/(DEVELOPMENT_TEAM.*?=.*?;)//g' Pods/Pods.xcodeproj/project.pbxproj
+          
+          echo "✅ Pods signing configs cleaned"
         fi
-        echo "✅ Pods signing configs cleaned"
         
     - name: Resolve Swift Package dependencies
       working-directory: capacitor-app/ios/App
