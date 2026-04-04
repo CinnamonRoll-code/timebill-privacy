@@ -92,9 +92,8 @@ jobs:
     - name: Scaffold Capacitor shell
       run: |
         mkdir -p capacitor-app/www
-
+    
         # ── Write package.json ──────────────────────────────────────────────
-        # IMPORTANT: heredoc body must NOT be indented — leading spaces break JSON parsing
         cat > capacitor-app/package.json << 'PKGJSON'
         {
           "name": "timebillpro",
@@ -107,17 +106,12 @@ jobs:
           }
         }
         PKGJSON
-
+    
         # ── Install Capacitor packages ───────────────────────────────────────
         cd capacitor-app
         npm install
-
-        # Verify packages installed correctly
-        echo "--- Installed Capacitor packages ---"
-        ls node_modules/@capacitor/
-
+    
         # ── Write capacitor.config.json ─────────────────────────────────────
-        # IMPORTANT: no leading spaces inside heredoc body
         cat > capacitor.config.json << 'CAPCFG'
         {
           "appId":   "${{ secrets.APPLE_BUNDLE_ID }}",
@@ -131,24 +125,23 @@ jobs:
           }
         }
         CAPCFG
-
-        # Validate JSON is parseable
-        node -e "JSON.parse(require('fs').readFileSync('capacitor.config.json','utf8'))" && \
-          echo "✅ capacitor.config.json is valid JSON"
-
+    
         # ── Copy your HTML into the webroot ─────────────────────────────────
         cp "${{ github.workspace }}/index.html" www/index.html
-
+    
         # ── Add iOS platform (creates the Xcode project skeleton) ────────────
         npx cap add ios
-
+    
         # ── CRITICAL: sync assets + register Capacitor SPM deps into Xcode ───
-        # cap add ios only creates the skeleton. Without cap sync, Xcode cannot
-        # locate the 'Capacitor' Swift module → "Unable to find module dependency"
         npx cap sync ios
-
-        echo "--- Xcode project after sync ---"
-        ls ios/App/
+    
+        # ✅ NEW: Install CocoaPods immediately after sync
+        cd ios/App
+        sudo gem install cocoapods
+        pod install --repo-update
+    
+        echo "✅ Capacitor project scaffolded and CocoaPods installed."
+        ls -la
 
     # ══════════════════════════════════════════════════════════════════════════
     # 5. INJECT APP ICON
@@ -295,28 +288,19 @@ jobs:
     # 8. RESOLVE SWIFT PACKAGE DEPENDENCIES (CocoaPods not needed for
     #    plain Capacitor — uses SPM by default in Capacitor 6)
     # ══════════════════════════════════════════════════════════════════════════
-    - name: Install CocoaPods dependencies
-      working-directory: capacitor-app
+    - name: Install CocoaPods dependencies  # 第 8 步改为：
+      working-directory: capacitor-app/ios/App
       run: |
-        # 安装 CocoaPods（如果未安装）
-        sudo gem install cocoapods || true
-        
-        # 进入 iOS 项目目录并安装 pods
-        cd ios/App
-        pod install --repo-update
-        
-        # 关键：移除 Pods targets 的代码签名设置
-        # 这防止 Xcode 试图对 Pods 应用配置文件
+        # 跳过安装，因为已在第 4 步完成
+        # 仅清理 Pods targets 的代码签名设置
         if [ -f "Pods/Pods.xcodeproj/project.pbxproj" ]; then
-          # 移除所有签名相关的配置
           perl -i -pe 's/CODE_SIGN_STYLE = Manual;//g' Pods/Pods.xcodeproj/project.pbxproj
           perl -i -pe 's/PROVISIONING_PROFILE\[sdk=iphoneos\*\] = .*?;//g' Pods/Pods.xcodeproj/project.pbxproj
           perl -i -pe 's/PROVISIONING_PROFILE = .*?;//g' Pods/Pods.xcodeproj/project.pbxproj
           perl -i -pe 's/CODE_SIGN_IDENTITY = .*?;//g' Pods/Pods.xcodeproj/project.pbxproj
           perl -i -pe 's/DEVELOPMENT_TEAM = .*?;//g' Pods/Pods.xcodeproj/project.pbxproj
         fi
-        
-        echo "✅ CocoaPods dependencies installed and signing configs removed"
+        echo "✅ Pods signing configs cleaned"
         
     - name: Resolve Swift Package dependencies
       working-directory: capacitor-app/ios/App
