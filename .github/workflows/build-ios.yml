@@ -347,6 +347,8 @@ jobs:
           DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
           PRODUCT_BUNDLE_IDENTIFIER="${{ secrets.APPLE_BUNDLE_ID }}" \
           OTHER_CODE_SIGN_FLAGS="--timestamp" \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGNING_ALLOWED=YES \
           -skipPackagePluginValidation \
           -skipMacroValidation
 
