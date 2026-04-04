@@ -372,8 +372,7 @@ jobs:
           CODE_SIGNING_REQUIRED=YES \
           CODE_SIGNING_ALLOWED=YES \
           -skipPackagePluginValidation \
-          -skipMacroValidation \
-          -useDerivedDataForPackageDependencies 2>&1 | tee build.log
+          -skipMacroValidation 2>&1 | tee build.log
 
         echo "✅ Archive created at ${{ env.ARCHIVE_PATH }}"
 
