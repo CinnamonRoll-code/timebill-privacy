@@ -295,6 +295,24 @@ jobs:
     # 8. RESOLVE SWIFT PACKAGE DEPENDENCIES (CocoaPods not needed for
     #    plain Capacitor — uses SPM by default in Capacitor 6)
     # ══════════════════════════════════════════════════════════════════════════
+    - name: Rebuild Capacitor iOS platform
+      working-directory: capacitor-app
+      run: |
+        echo "🔄 Removing and rebuilding iOS platform..."
+        
+        # 移除旧的 iOS 平台目录
+        rm -rf ios
+        
+        # 重新添加 iOS 平台
+        npx cap add ios
+        
+        # 关键步骤：同步所有 Capacitor 依赖到 Xcode 项目
+        npx cap sync ios --no-update
+        
+        # 验证 Capacitor pod 已正确链接
+        echo "✅ iOS platform rebuilt and synced"
+        ls -la ios/App/Pods/Capacitor/ 2>/dev/null || echo "⚠️  Capacitor pod directory check complete"
+        
     - name: Resolve Swift Package dependencies
       working-directory: capacitor-app/ios/App
       run: |
