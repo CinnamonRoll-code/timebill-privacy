@@ -291,21 +291,14 @@ jobs:
         echo "✅ CocoaPods installed successfully"
         
         if [ -f "Pods/Pods.xcodeproj/project.pbxproj" ]; then
-          # 使用 xcconfig 覆盖所有 Pod 的签名设置，而不是尝试删除
-          cat > Pods/Pods.xcodeproj/Config.xcconfig << 'EOF'
-          CODE_SIGN_STYLE = Automatic
-          CODE_SIGN_IDENTITY = 
-          PROVISIONING_PROFILE = 
-          PROVISIONING_PROFILE_SPECIFIER = 
-          CODE_SIGNING_REQUIRED = NO
-          EOF
-          
-          # 在 project.pbxproj 中引用该配置文件
+          printf 'CODE_SIGN_STYLE = Automatic\nCODE_SIGN_IDENTITY = \nPROVISIONING_PROFILE = \nPROVISIONING_PROFILE_SPECIFIER = \nCODE_SIGNING_REQUIRED = NO\n' \
+            > Pods/Pods.xcodeproj/Config.xcconfig
+
           perl -i -pe 's/CODE_SIGN_STYLE = Manual;//g' Pods/Pods.xcodeproj/project.pbxproj
           perl -i -pe 's/(PROVISIONING_PROFILE.*?=.*?;)//g' Pods/Pods.xcodeproj/project.pbxproj
           perl -i -pe 's/(CODE_SIGN_IDENTITY.*?=.*?;)//g' Pods/Pods.xcodeproj/project.pbxproj
           perl -i -pe 's/(DEVELOPMENT_TEAM.*?=.*?;)//g' Pods/Pods.xcodeproj/project.pbxproj
-          
+
           echo "✅ Pods signing configs cleaned"
         fi
         
