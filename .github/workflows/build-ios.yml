@@ -326,6 +326,7 @@ jobs:
           GCC_PREPROCESSOR_DEFINITIONS='$(inherited)' \
           -skipPackagePluginValidation \
           -skipMacroValidation \
+          PODS_CODE_SIGNING_ALLOWED=NO \
           -verbose 2>&1 | tee build.log
     
         if [ -d "${{ env.ARCHIVE_PATH }}" ]; then
