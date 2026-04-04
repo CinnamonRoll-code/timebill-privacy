@@ -307,7 +307,7 @@ jobs:
         npx cap add ios
         
         # 关键步骤：同步所有 Capacitor 依赖到 Xcode 项目
-        npx cap sync ios --no-update
+        npx cap sync ios
         
         # 验证 Capacitor pod 已正确链接
         echo "✅ iOS platform rebuilt and synced"
