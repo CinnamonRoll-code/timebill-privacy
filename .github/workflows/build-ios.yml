@@ -295,23 +295,18 @@ jobs:
     # 8. RESOLVE SWIFT PACKAGE DEPENDENCIES (CocoaPods not needed for
     #    plain Capacitor — uses SPM by default in Capacitor 6)
     # ══════════════════════════════════════════════════════════════════════════
-    - name: Rebuild Capacitor iOS platform
+    - name: Install CocoaPods dependencies
       working-directory: capacitor-app
       run: |
-        echo "🔄 Removing and rebuilding iOS platform..."
+        # 安装 CocoaPods（如果未安装）
+        sudo gem install cocoapods || true
         
-        # 移除旧的 iOS 平台目录
-        rm -rf ios
+        # 进入 iOS 项目目录并安装 pods
+        cd ios/App
+        pod install --repo-update
         
-        # 重新添加 iOS 平台
-        npx cap add ios
-        
-        # 关键步骤：同步所有 Capacitor 依赖到 Xcode 项目
-        npx cap sync ios
-        
-        # 验证 Capacitor pod 已正确链接
-        echo "✅ iOS platform rebuilt and synced"
-        ls -la ios/App/Pods/Capacitor/ 2>/dev/null || echo "⚠️  Capacitor pod directory check complete"
+        echo "✅ CocoaPods dependencies installed"
+        ls -la Pods/Capacitor/ 2>/dev/null || echo "⚠️ Capacitor pod installed"
         
     - name: Resolve Swift Package dependencies
       working-directory: capacitor-app/ios/App
@@ -319,12 +314,12 @@ jobs:
         mkdir -p "${{ env.DERIVED_DATA_PATH }}"
         
         xcodebuild -resolvePackageDependencies \
-          -project App.xcodeproj \
+          -workspace App.xcworkspace \
           -scheme "$XCODE_SCHEME" \
           -derivedDataPath "${{ env.DERIVED_DATA_PATH }}" \
           -skipPackagePluginValidation \
           -skipMacroValidation \
-          -verbose  # 添加详细输出以诊断问题
+          -verbose
 
         echo "✅ Swift Package dependencies resolved."
         find "${{ env.DERIVED_DATA_PATH }}" -name "*.resolved" 2>/dev/null | head -5
@@ -339,7 +334,7 @@ jobs:
         mkdir -p "$(dirname "${{ env.ARCHIVE_PATH }}")"
 
         xcodebuild archive \
-          -project App.xcodeproj \
+          -workspace App.xcworkspace \
           -scheme "$XCODE_SCHEME" \
           -configuration "$BUILD_CONFIGURATION" \
           -archivePath "${{ env.ARCHIVE_PATH }}" \
