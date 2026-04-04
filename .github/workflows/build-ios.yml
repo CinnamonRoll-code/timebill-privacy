@@ -342,21 +342,14 @@ jobs:
           -destination "generic/platform=iOS" \
           CODE_SIGN_STYLE="Manual" \
           CODE_SIGN_IDENTITY="Apple Distribution" \
-          PROVISIONING_PROFILE_SPECIFIER="$PROFILE_UUID" \
-          PROVISIONING_PROFILE="" \
+          PROVISIONING_PROFILE="$PROFILE_UUID" \
           DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
           PRODUCT_BUNDLE_IDENTIFIER="${{ secrets.APPLE_BUNDLE_ID }}" \
           OTHER_CODE_SIGN_FLAGS="--timestamp" \
-          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGNING_REQUIRED=YES \
           CODE_SIGNING_ALLOWED=YES \
           -skipPackagePluginValidation \
           -skipMacroValidation
-          -xcconfig <(cat <<EOF
-          CODE_SIGN_IDENTITY[sdk=iphoneos*] = Apple Distribution
-          CODE_SIGN_IDENTITY[sdk=iphonesimulator*] = -
-          LD_RUNPATH_SEARCH_PATHS = $(inherited)
-          EOF
-          )
 
         echo "✅ Archive created at ${{ env.ARCHIVE_PATH }}"
 
