@@ -306,7 +306,6 @@ jobs:
           -derivedDataPath "${{ env.DERIVED_DATA_PATH }}" \
           -skipPackagePluginValidation \
           -skipMacroValidation \
-          -onlyUsePackageVersionsFromResolvedFile \
           -verbose  # 添加详细输出以诊断问题
 
         echo "✅ Swift Package dependencies resolved."
