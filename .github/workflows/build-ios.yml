@@ -305,13 +305,18 @@ jobs:
         cd ios/App
         pod install --repo-update
         
-        # 安装后立即清除 Pods targets 的代码签名设置
-        sed -i '' '/PROVISIONING_PROFILE/d' Pods/Pods.xcodeproj/project.pbxproj
-        sed -i '' '/CODE_SIGN_STYLE = Manual/d' Pods/Pods.xcodeproj/project.pbxproj
-        sed -i '' '/CODE_SIGN_IDENTITY =/d' Pods/Pods.xcodeproj/project.pbxproj
+        # 关键：移除 Pods targets 的代码签名设置
+        # 这防止 Xcode 试图对 Pods 应用配置文件
+        if [ -f "Pods/Pods.xcodeproj/project.pbxproj" ]; then
+          # 移除所有签名相关的配置
+          perl -i -pe 's/CODE_SIGN_STYLE = Manual;//g' Pods/Pods.xcodeproj/project.pbxproj
+          perl -i -pe 's/PROVISIONING_PROFILE\[sdk=iphoneos\*\] = .*?;//g' Pods/Pods.xcodeproj/project.pbxproj
+          perl -i -pe 's/PROVISIONING_PROFILE = .*?;//g' Pods/Pods.xcodeproj/project.pbxproj
+          perl -i -pe 's/CODE_SIGN_IDENTITY = .*?;//g' Pods/Pods.xcodeproj/project.pbxproj
+          perl -i -pe 's/DEVELOPMENT_TEAM = .*?;//g' Pods/Pods.xcodeproj/project.pbxproj
+        fi
         
-        echo "✅ CocoaPods dependencies installed and cleaned"
-        ls -la Pods/Capacitor/ 2>/dev/null || echo "⚠️ Capacitor pod installed"
+        echo "✅ CocoaPods dependencies installed and signing configs removed"
         
     - name: Resolve Swift Package dependencies
       working-directory: capacitor-app/ios/App
@@ -335,18 +340,17 @@ jobs:
     - name: Clean Xcode provisioning profile settings
       working-directory: capacitor-app/ios/App
       run: |
-        # 清除 Pods.xcodeproj 中的手动配置文件设置
+        # 彻底清除 Pods.xcodeproj 中的手动配置文件设置
         if [ -f "Pods/Pods.xcodeproj/project.pbxproj" ]; then
-          # 删除所有 PROVISIONING_PROFILE 相关配置
-          sed -i '' '/PROVISIONING_PROFILE\[sdk=iphoneos\*\]/d' Pods/Pods.xcodeproj/project.pbxproj
-          sed -i '' '/PROVISIONING_PROFILE = /d' Pods/Pods.xcodeproj/project.pbxproj
-          sed -i '' '/PROVISIONING_PROFILE_SPECIFIER/d' Pods/Pods.xcodeproj/project.pbxproj
-          echo "✅ Cleared provisioning profile settings from Pods project"
-        fi
-        
-        # 为主 App target 保留配置，但从 Pods targets 中移除
-        if [ -f "App.xcodeproj/project.pbxproj" ]; then
-          echo "✅ Main App project.pbxproj ready for code signing"
+          echo "🔍 Cleaning Pods project signing settings..."
+          
+          # 使用 perl 进行更稳健的替换，防止 sed 行尾问题
+          perl -i -pe 's/CODE_SIGN_STYLE = Manual;//g' Pods/Pods.xcodeproj/project.pbxproj
+          perl -i -pe 's/PROVISIONING_PROFILE.*?=.*?;/;/g' Pods/Pods.xcodeproj/project.pbxproj
+          perl -i -pe 's/PROVISIONING_PROFILE_SPECIFIER.*?=.*?;/;/g' Pods/Pods.xcodeproj/project.pbxproj
+          perl -i -pe 's/CODE_SIGN_IDENTITY.*?=.*?;/;/g' Pods/Pods.xcodeproj/project.pbxproj
+          
+          echo "✅ Cleared all provisioning profile settings from Pods project"
         fi
     
     - name: Archive iOS app
@@ -354,7 +358,7 @@ jobs:
       run: |
         mkdir -p "${{ env.DERIVED_DATA_PATH }}"
         mkdir -p "$(dirname "${{ env.ARCHIVE_PATH }}")"
-
+    
         xcodebuild archive \
           -workspace App.xcworkspace \
           -scheme "$XCODE_SCHEME" \
@@ -371,10 +375,17 @@ jobs:
           OTHER_CODE_SIGN_FLAGS="--timestamp" \
           CODE_SIGNING_REQUIRED=YES \
           CODE_SIGNING_ALLOWED=YES \
+          GCC_PREPROCESSOR_DEFINITIONS='$(inherited)' \
           -skipPackagePluginValidation \
-          -skipMacroValidation 2>&1 | tee build.log
-
-        echo "✅ Archive created at ${{ env.ARCHIVE_PATH }}"
+          -skipMacroValidation \
+          -verbose 2>&1 | tee build.log
+    
+        if [ -d "${{ env.ARCHIVE_PATH }}" ]; then
+          echo "✅ Archive created successfully"
+        else
+          echo "❌ Archive creation failed"
+          exit 1
+        fi
 
     # ══════════════════════════════════════════════════════════════════════════
     # 10. EXPORT IPA
