@@ -298,21 +298,19 @@ jobs:
     - name: Resolve Swift Package dependencies
       working-directory: capacitor-app/ios/App
       run: |
-        # cap sync already wrote Package.resolved, so this step just pre-fetches
-        # the resolved packages into DerivedData to speed up the archive step.
-        # -skipPackagePluginValidation avoids CI permission prompts.
-        # -onlyUsePackageVersionsFromResolvedFile pins exact versions from sync.
+        mkdir -p "${{ env.DERIVED_DATA_PATH }}"
+        
         xcodebuild \
           -resolvePackageDependencies \
           -project App.xcodeproj \
           -scheme "$XCODE_SCHEME" \
-          -derivedDataPath "$DERIVED_DATA_PATH" \
+          -derivedDataPath "${{ env.DERIVED_DATA_PATH }}" \
           -skipPackagePluginValidation \
+          -skipMacroValidation \
           -onlyUsePackageVersionsFromResolvedFile
 
         echo "✅ Swift Package dependencies resolved."
-        # Show what was resolved (useful for debugging)
-        find "$DERIVED_DATA_PATH" -name "*.resolved" 2>/dev/null | head -5
+        find "${{ env.DERIVED_DATA_PATH }}" -name "*.resolved" 2>/dev/null | head -5
 
     # ══════════════════════════════════════════════════════════════════════════
     # 9. ARCHIVE (compile + link into .xcarchive)
