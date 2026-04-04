@@ -197,12 +197,12 @@ jobs:
       run: |
         # 检查密钥是否为空
         if [ -z "$CERTIFICATE_BASE64" ]; then
-          echo "❌ ERROR: IOS_CERTIFICATE_BASE64 密钥未设置或为空"
+          echo "❌ IOS_CERTIFICATE_BASE64 密钥未设置或为空"
           exit 1
         fi
         
         if [ -z "$CERTIFICATE_PASSWORD" ]; then
-          echo "❌ ERROR: IOS_CERTIFICATE_PASSWORD 密钥未设置或为空"
+          echo "❌ IOS_CERTIFICATE_PASSWORD 密钥未设置或为空"
           exit 1
         fi
         
